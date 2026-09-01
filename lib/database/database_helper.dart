@@ -279,18 +279,19 @@ class DatabaseHelper {
   //USERS (Login / Register screens)
   Future<int> insertUser(AppUser user) async {
     final db = await database;
-    return await db.insert(
-      'users',
-      user.toMap()..removeWhere((key, value) => key == 'id' && value == null),
-    );
+    final map = user.toMap()
+      ..removeWhere((key, value) => key == 'id' && value == null);
+    map['email'] = user.email.toLowerCase().trim();
+    return await db.insert('users', map);
   }
 
   Future<AppUser?> loginUser(String email, String password) async {
     final db = await database;
+    final normalizedEmail = email.toLowerCase().trim();
     final result = await db.query(
       'users',
       where: 'email = ? AND password = ?',
-      whereArgs: [email, password],
+      whereArgs: [normalizedEmail, password],
     );
     if (result.isNotEmpty) return AppUser.fromMap(result.first);
     return null;
@@ -298,11 +299,19 @@ class DatabaseHelper {
 
   Future<AppUser?> getUserByEmail(String email) async {
     final db = await database;
+    final normalizedEmail = email.toLowerCase().trim();
     final result = await db.query(
       'users',
       where: 'email = ?',
-      whereArgs: [email],
+      whereArgs: [normalizedEmail],
     );
+    if (result.isNotEmpty) return AppUser.fromMap(result.first);
+    return null;
+  }
+
+  Future<AppUser?> getUserById(int id) async {
+    final db = await database;
+    final result = await db.query('users', where: 'id = ?', whereArgs: [id]);
     if (result.isNotEmpty) return AppUser.fromMap(result.first);
     return null;
   }
@@ -683,9 +692,7 @@ class DatabaseHelper {
   Future<Map<String, dynamic>> getDashboardSummary() async {
     final db = await database;
 
-   
     // TOTAL MEMBERS
-   
 
     final totalMembers =
         Sqflite.firstIntValue(
@@ -693,9 +700,7 @@ class DatabaseHelper {
         ) ??
         0;
 
-   
     // ACTIVE MEMBERS
-   
 
     final activeMembers =
         Sqflite.firstIntValue(
@@ -705,9 +710,7 @@ class DatabaseHelper {
         ) ??
         0;
 
-   
     // TOTAL TRAINERS
-   
 
     final totalTrainers =
         Sqflite.firstIntValue(
@@ -715,9 +718,7 @@ class DatabaseHelper {
         ) ??
         0;
 
-   
     // TOTAL REVENUE
-   
 
     final revenueResult = await db.rawQuery('''
     SELECT COALESCE(SUM(amount), 0) AS total
@@ -728,9 +729,7 @@ class DatabaseHelper {
     final totalRevenue =
         (revenueResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
-   
     // TOTAL EXPENSES
-   
 
     final expenseResult = await db.rawQuery('''
     SELECT COALESCE(SUM(amount), 0) AS total
@@ -740,9 +739,7 @@ class DatabaseHelper {
     final totalExpenses =
         (expenseResult.first['total'] as num?)?.toDouble() ?? 0.0;
 
-   
     // TODAY'S ATTENDANCE
-   
 
     final today = DateTime.now().toIso8601String().split('T').first;
 
@@ -760,9 +757,8 @@ class DatabaseHelper {
         ) ??
         0;
 
-   
     // PENDING FEES
-   
+
     //
     // Temporarily 0 because your current database does not yet
     // define a reliable unpaid-balance rule.

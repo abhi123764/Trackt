@@ -7,16 +7,20 @@ class DashboardProvider extends ChangeNotifier {
   final DashboardService _dashboardService = DashboardService.instance;
 
   DashboardSummary? _summary;
-
   bool _isLoading = true;
-
   String? _errorMessage;
+  int _currentTab = 0;
 
   DashboardSummary? get summary => _summary;
-
   bool get isLoading => _isLoading;
-
   String? get errorMessage => _errorMessage;
+  int get currentTab => _currentTab;
+
+  void setTab(int index) {
+    if (_currentTab == index) return;
+    _currentTab = index;
+    notifyListeners();
+  }
 
   Future<void> loadDashboard() async {
     _isLoading = true;

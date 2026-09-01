@@ -23,4 +23,12 @@ class AuthService {
 
     return true;
   }
+
+  Future<AppUser?> getUserById(int id) async {
+    return await DatabaseHelper.instance.getUserById(id);
+  }
+
+  Future<AppUser?> getUserByEmail(String email) async {
+    return await DatabaseHelper.instance.getUserByEmail(email);
+  }
 }

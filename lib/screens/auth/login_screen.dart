@@ -4,8 +4,9 @@ import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/validators.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../auth/register_screen.dart';
+import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -19,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
 
   @override
   void dispose() {
@@ -96,9 +96,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-   
   // HEADER UI
-   
 
   Widget _buildHeader() {
     return Container(
@@ -138,9 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-   
   // LOGIN CARD UI
-   
 
   Widget _buildLoginCard() {
     return Container(
@@ -182,9 +178,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-   
   // EMAIL FIELD UI
-   
 
   Widget _buildEmailField() {
     return Column(
@@ -205,76 +199,56 @@ class _LoginScreenState extends State<LoginScreen> {
               color: AppColors.textSecondary,
             ),
           ),
-          validator: (value) {
-            if (value == null || value.trim().isEmpty) {
-              return 'Email is required';
-            }
-
-            if (!value.contains('@')) {
-              return 'Enter a valid email';
-            }
-
-            return null;
-          },
+          validator: AppValidators.validateEmail,
         ),
       ],
     );
   }
 
-   
   // PASSWORD FIELD UI
-   
 
   Widget _buildPasswordField() {
-    final auth = context.watch<AuthProvider>();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text('PASSWORD', style: AppTextStyles.label),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _passwordController,
-          obscureText: _obscurePassword,
-          textInputAction: TextInputAction.done,
-          onFieldSubmitted: (_) {
-            if (!auth.isLoading) {
-              _handleLogin();
-            }
-          },
-          decoration: InputDecoration(
-            hintText: 'Enter your password',
-            prefixIcon: const Icon(
-              Icons.lock_outline,
-              color: AppColors.textSecondary,
-            ),
-            suffixIcon: IconButton(
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
+    return Consumer<AuthProvider>(
+      builder: (context, auth, child) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('PASSWORD', style: AppTextStyles.label),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: auth.obscurePassword,
+              textInputAction: TextInputAction.done,
+              onFieldSubmitted: (_) {
+                if (!auth.isLoading) {
+                  _handleLogin();
+                }
               },
-              icon: Icon(
-                _obscurePassword
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: AppColors.textSecondary,
+              decoration: InputDecoration(
+                hintText: 'Enter your password',
+                prefixIcon: const Icon(
+                  Icons.lock_outline,
+                  color: AppColors.textSecondary,
+                ),
+                suffixIcon: IconButton(
+                  onPressed: auth.toggleObscurePassword,
+                  icon: Icon(
+                    auth.obscurePassword
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
               ),
+              validator: AppValidators.validatePassword,
             ),
-          ),
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return 'Password is required';
-            }
-            return null;
-          },
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
-   
+
   // ERROR MESSAGE UI
-   
 
   Widget _buildErrorMessage() {
     return Consumer<AuthProvider>(
@@ -313,9 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-   
   // LOGIN BUTTON UI
-   
 
   Widget _buildLoginButton() {
     return Consumer<AuthProvider>(
@@ -347,9 +319,7 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-   
   // REGISTER LINK UI
-   
 
   Widget _buildRegisterLink() {
     return Center(
