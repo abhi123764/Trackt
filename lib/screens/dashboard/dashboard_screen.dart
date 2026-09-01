@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:trackt/screens/members/add_member_screen.dart';
 
 import '../../models/dashboard_summary.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
+import '../members/members_screen.dart';
 import 'widgets/activity_tile.dart';
 import 'widgets/dashboard_bottom_nav.dart';
 import 'widgets/dashboard_top_bar.dart';
@@ -36,6 +38,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: Consumer<DashboardProvider>(
           builder: (context, dashboard, child) {
+            if (dashboard.currentTab == 1) {
+              return const MembersScreen();
+            }
+
+            if (dashboard.currentTab != 0) {
+              return _buildTabPlaceholder(dashboard.currentTab);
+            }
+
             return RefreshIndicator(
               onRefresh: dashboard.refreshDashboard,
               child: _buildBody(dashboard),
@@ -50,6 +60,48 @@ class _DashboardScreenState extends State<DashboardScreen> {
             onTabSelected: (index) => dashboard.setTab(index),
           );
         },
+      ),
+    );
+  }
+
+  // TAB PLACEHOLDER
+  Widget _buildTabPlaceholder(int tabIndex) {
+    final titles = ['Home', 'Members', 'Reports', 'Payments', 'Settings'];
+    final title = tabIndex < titles.length ? titles[tabIndex] : 'Section';
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.construction,
+              size: 56,
+              color: AppColors.tealPrimary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '$title Screen Coming Soon',
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.tealDark,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'The $title feature will be connected here.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 13,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -167,6 +219,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: 'All Members',
               trailingColor: AppColors.accentGreen,
               valueColor: AppColors.tealDark,
+              onTap: () => context.read<DashboardProvider>().setTab(1),
             ),
 
             StatCard(
@@ -175,6 +228,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: 'Currently Active',
               trailingColor: AppColors.textSecondary,
               valueColor: AppColors.textPrimary,
+              onTap: () => context.read<DashboardProvider>().setTab(1),
             ),
 
             StatCard(
@@ -243,7 +297,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.person_add_alt_1,
               label: 'Add Members',
               onTap: () {
-                // Add Members screen later.
+                context.read<DashboardProvider>().setTab(1);
+                showDialog(
+                  context: context,
+                  builder: (_) => const AddMemberScreen(),
+                );
               },
             ),
 

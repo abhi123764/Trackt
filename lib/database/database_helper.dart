@@ -274,6 +274,37 @@ class DatabaseHelper {
       'duration_days': 30,
       'price': 1200.0,
     });
+
+    //Default Trainers
+
+    final todayStr = DateTime.now().toIso8601String().split('T').first;
+    await db.insert('trainers', {
+      'name': 'David Chen',
+      'age': 29,
+      'gender': 'Male',
+      'mobile_number': '9876543210',
+      'email': 'david@trackt.com',
+      'joining_date': todayStr,
+      'salary': 25000.0,
+    });
+    await db.insert('trainers', {
+      'name': 'Sarah Mitchell',
+      'age': 27,
+      'gender': 'Female',
+      'mobile_number': '9876543211',
+      'email': 'sarah@trackt.com',
+      'joining_date': todayStr,
+      'salary': 28000.0,
+    });
+    await db.insert('trainers', {
+      'name': 'John Doe',
+      'age': 32,
+      'gender': 'Male',
+      'mobile_number': '9876543212',
+      'email': 'john@trackt.com',
+      'joining_date': todayStr,
+      'salary': 30000.0,
+    });
   }
 
   //USERS (Login / Register screens)
@@ -325,7 +356,25 @@ class DatabaseHelper {
 
   Future<List<MembershipPlan>> getAllPlans() async {
     final db = await database;
-    final result = await db.query('membership_plans');
+    var result = await db.query('membership_plans');
+    if (result.isEmpty) {
+      await db.insert('membership_plans', {
+        'name': 'Elite',
+        'duration_days': 30,
+        'price': 2500.0,
+      });
+      await db.insert('membership_plans', {
+        'name': 'Premium',
+        'duration_days': 30,
+        'price': 1500.0,
+      });
+      await db.insert('membership_plans', {
+        'name': 'Normal',
+        'duration_days': 30,
+        'price': 1200.0,
+      });
+      result = await db.query('membership_plans');
+    }
     return result.map((e) => MembershipPlan.fromMap(e)).toList();
   }
 
@@ -352,7 +401,18 @@ class DatabaseHelper {
 
   Future<int> insertMember(Member member) async {
     final db = await database;
-    return await db.insert('members', member.toMap()..remove('id'));
+    try {
+      return await db.insert('members', member.toMap()..remove('id'));
+    } catch (e) {
+      if (e.toString().contains('FOREIGN KEY')) {
+        final map = member.toMap()..remove('id');
+        map['trainer_id'] = null;
+        map['plan_id'] = null;
+        map['diet_plan_id'] = null;
+        return await db.insert('members', map);
+      }
+      rethrow;
+    }
   }
 
   Future<List<Member>> getAllMembers() async {
@@ -380,12 +440,28 @@ class DatabaseHelper {
 
   Future<int> updateMember(Member member) async {
     final db = await database;
-    return await db.update(
-      'members',
-      member.toMap(),
-      where: 'id = ?',
-      whereArgs: [member.id],
-    );
+    try {
+      return await db.update(
+        'members',
+        member.toMap(),
+        where: 'id = ?',
+        whereArgs: [member.id],
+      );
+    } catch (e) {
+      if (e.toString().contains('FOREIGN KEY')) {
+        final map = member.toMap();
+        map['trainer_id'] = null;
+        map['plan_id'] = null;
+        map['diet_plan_id'] = null;
+        return await db.update(
+          'members',
+          map,
+          where: 'id = ?',
+          whereArgs: [member.id],
+        );
+      }
+      rethrow;
+    }
   }
 
   Future<int> deleteMember(int id) async {
@@ -410,7 +486,38 @@ class DatabaseHelper {
 
   Future<List<Trainer>> getAllTrainers() async {
     final db = await database;
-    final result = await db.query('trainers', orderBy: 'name ASC');
+    var result = await db.query('trainers', orderBy: 'name ASC');
+    if (result.isEmpty) {
+      final todayStr = DateTime.now().toIso8601String().split('T').first;
+      await db.insert('trainers', {
+        'name': 'David Chen',
+        'age': 29,
+        'gender': 'Male',
+        'mobile_number': '9876543210',
+        'email': 'david@trackt.com',
+        'joining_date': todayStr,
+        'salary': 25000.0,
+      });
+      await db.insert('trainers', {
+        'name': 'Sarah Mitchell',
+        'age': 27,
+        'gender': 'Female',
+        'mobile_number': '9876543211',
+        'email': 'sarah@trackt.com',
+        'joining_date': todayStr,
+        'salary': 28000.0,
+      });
+      await db.insert('trainers', {
+        'name': 'John Doe',
+        'age': 32,
+        'gender': 'Male',
+        'mobile_number': '9876543212',
+        'email': 'john@trackt.com',
+        'joining_date': todayStr,
+        'salary': 30000.0,
+      });
+      result = await db.query('trainers', orderBy: 'name ASC');
+    }
     return result.map((e) => Trainer.fromMap(e)).toList();
   }
 
