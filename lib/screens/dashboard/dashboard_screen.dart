@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:trackt/screens/members/add_member_screen.dart';
+import 'package:trackt/screens/trainers/trainers_screen.dart';
 
 import '../../models/dashboard_summary.dart';
 import '../../providers/dashboard_provider.dart';
@@ -317,6 +318,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.fitness_center,
               label: 'Trainers',
               onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const TrainersScreen()),
+                );
+
                 // Trainers screen later.
               },
             ),
