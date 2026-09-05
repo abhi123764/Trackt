@@ -65,15 +65,14 @@ class _MemberCardState extends State<MemberCard> {
   @override
   Widget build(BuildContext context) {
     final member = widget.member;
-    final bool isExpired = member.status.toLowerCase() == 'inactive' ||
-        member.status.toLowerCase() == 'expired';
 
     // Get today's attendance from provider
     final todayAttendance = member.id != null
         ? context.watch<MemberProvider>().getTodayAttendance(member.id!)
         : null;
 
-    final bool isCheckedIn = todayAttendance != null &&
+    final bool isCheckedIn =
+        todayAttendance != null &&
         todayAttendance.checkIn != null &&
         todayAttendance.checkOut == null;
 
@@ -90,6 +89,44 @@ class _MemberCardState extends State<MemberCard> {
         : null;
 
     final planName = assignedPlan?.name.toUpperCase() ?? 'NORMAL';
+
+    // Get assigned trainer
+    final trainers = context.watch<MemberProvider>().trainers;
+    final assignedTrainer = member.trainerId != null
+        ? trainers.cast().firstWhere(
+            (t) => t.id == member.trainerId,
+            orElse: () => null,
+          )
+        : null;
+    final String trainerName = assignedTrainer?.name ?? 'Unassigned';
+
+    // Calculate dynamic dates and days left
+    DateTime startDate;
+    try {
+      startDate = DateTime.parse(member.joinDate);
+    } catch (_) {
+      startDate = DateTime.now();
+    }
+    final int duration = assignedPlan?.durationDays ?? 30;
+    final DateTime endDate = startDate.add(Duration(days: duration));
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+    final DateTime endDay = DateTime(endDate.year, endDate.month, endDate.day);
+    final int daysLeft = endDay.difference(today).inDays;
+
+    final bool isExpired =
+        member.status.toLowerCase() == 'inactive' ||
+        member.status.toLowerCase() == 'expired' ||
+        daysLeft < 0;
+
+    final String daysLeftText = isExpired
+        ? 'Expired'
+        : daysLeft == 0
+        ? 'Expires Today'
+        : '$daysLeft Days Left';
+
+    final String dateRangeText =
+        '${_formatDate(startDate)} - ${_formatDate(endDate)}';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -155,7 +192,7 @@ class _MemberCardState extends State<MemberCard> {
                       ),
                       const SizedBox(height: 2),
                       Text(
-                        'Trainer: ${member.gender == 'Female' ? 'Sarah Mitchell' : 'David Chen'}',
+                        'Trainer: $trainerName',
                         style: const TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: 12.5,
@@ -192,9 +229,16 @@ class _MemberCardState extends State<MemberCard> {
                       value: 'delete',
                       child: Row(
                         children: [
-                          Icon(Icons.delete_outline, color: AppColors.danger, size: 18),
+                          Icon(
+                            Icons.delete_outline,
+                            color: AppColors.danger,
+                            size: 18,
+                          ),
                           SizedBox(width: 8),
-                          Text('Delete Member', style: TextStyle(color: AppColors.danger)),
+                          Text(
+                            'Delete Member',
+                            style: TextStyle(color: AppColors.danger),
+                          ),
                         ],
                       ),
                     ),
@@ -227,19 +271,19 @@ class _MemberCardState extends State<MemberCard> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      isExpired ? 'Expired' : '25 Days Left',
+                      daysLeftText,
                       style: TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: isExpired ? const Color(0xFFD92D20) : const Color(0xFF054446),
+                        color: isExpired
+                            ? const Color(0xFFD92D20)
+                            : const Color(0xFF054446),
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      isExpired
-                          ? 'May 12, 2026 - Jun 12, 2026'
-                          : 'Jun 18, 2026 - Jul 18, 2026',
+                      dateRangeText,
                       style: const TextStyle(
                         fontFamily: 'Poppins',
                         fontSize: 12,
@@ -254,7 +298,10 @@ class _MemberCardState extends State<MemberCard> {
                   children: [
                     // Payment Status Pill
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: isExpired
                             ? const Color(0xFFFEE4E2)
@@ -265,9 +312,13 @@ class _MemberCardState extends State<MemberCard> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isExpired ? Icons.error_outline : Icons.check_circle_outline,
+                            isExpired
+                                ? Icons.error_outline
+                                : Icons.check_circle_outline,
                             size: 14,
-                            color: isExpired ? const Color(0xFFD92D20) : const Color(0xFF027A48),
+                            color: isExpired
+                                ? const Color(0xFFD92D20)
+                                : const Color(0xFF027A48),
                           ),
                           const SizedBox(width: 4),
                           Text(
@@ -276,7 +327,9 @@ class _MemberCardState extends State<MemberCard> {
                               fontFamily: 'Poppins',
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
-                              color: isExpired ? const Color(0xFFD92D20) : const Color(0xFF027A48),
+                              color: isExpired
+                                  ? const Color(0xFFD92D20)
+                                  : const Color(0xFF027A48),
                             ),
                           ),
                         ],
@@ -287,7 +340,9 @@ class _MemberCardState extends State<MemberCard> {
                       onTap: () {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Renewing membership for ${member.name}'),
+                            content: Text(
+                              'Renewing membership for ${member.name}',
+                            ),
                             backgroundColor: AppColors.tealPrimary,
                           ),
                         );
@@ -298,7 +353,9 @@ class _MemberCardState extends State<MemberCard> {
                           fontFamily: 'Poppins',
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isExpired ? const Color(0xFFD92D20) : const Color(0xFF054446),
+                          color: isExpired
+                              ? const Color(0xFFD92D20)
+                              : const Color(0xFF054446),
                         ),
                       ),
                     ),
@@ -327,10 +384,10 @@ class _MemberCardState extends State<MemberCard> {
                   isCheckedIn
                       ? 'Status: Checked-in at $checkInTime'
                       : checkOutTime != null
-                          ? 'Status: Checked-out at $checkOutTime'
-                          : isExpired
-                              ? 'Last check-in: Expired'
-                              : 'Status: Not Checked-in Today',
+                      ? 'Status: Checked-out at $checkOutTime'
+                      : isExpired
+                      ? 'Last check-in: Expired'
+                      : 'Status: Not Checked-in Today',
                   style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 11,
@@ -345,9 +402,7 @@ class _MemberCardState extends State<MemberCard> {
             if (isCheckedIn)
               Row(
                 children: [
-                  Expanded(
-                    child: _buildTimeBox('IN', checkInTime ?? 'Active'),
-                  ),
+                  Expanded(child: _buildTimeBox('IN', checkInTime ?? 'Active')),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton.icon(
@@ -377,13 +432,9 @@ class _MemberCardState extends State<MemberCard> {
             else if (checkInTime != null && checkOutTime != null)
               Row(
                 children: [
-                  Expanded(
-                    child: _buildTimeBox('IN', checkInTime),
-                  ),
+                  Expanded(child: _buildTimeBox('IN', checkInTime)),
                   const SizedBox(width: 12),
-                  Expanded(
-                    child: _buildTimeBox('OUT', checkOutTime),
-                  ),
+                  Expanded(child: _buildTimeBox('OUT', checkOutTime)),
                 ],
               )
             else
@@ -525,5 +576,23 @@ class _MemberCardState extends State<MemberCard> {
       default:
         return const Color(0xFF344054);
     }
+  }
+
+  String _formatDate(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year}';
   }
 }
