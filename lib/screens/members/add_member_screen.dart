@@ -178,7 +178,8 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   }
 
   Future<void> _showUploadOptions(String documentType) async {
-    final bool hasFile = (documentType == 'photo' && _profilePhotoPath != null) ||
+    final bool hasFile =
+        (documentType == 'photo' && _profilePhotoPath != null) ||
         (documentType == 'id' && _idProofPath != null) ||
         (documentType == 'medical' && _medicalReportsPath != null);
 
@@ -191,27 +192,60 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.tealPrimary),
-              title: const Text('Take Photo', style: TextStyle(fontFamily: 'Poppins')),
+              leading: const Icon(
+                Icons.camera_alt_outlined,
+                color: AppColors.tealPrimary,
+              ),
+              title: const Text(
+                'Take Photo',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _getImage(documentType, ImageSource.camera);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.tealPrimary),
-              title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Poppins')),
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.tealPrimary,
+              ),
+              title: const Text(
+                'Choose from Gallery',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _getImage(documentType, ImageSource.gallery);
               },
             ),
+            if (documentType != 'photo')
+              ListTile(
+                leading: const Icon(
+                  Icons.description_outlined,
+                  color: AppColors.tealPrimary,
+                ),
+                title: const Text(
+                  'Upload Document (PDF/File)',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickDocument(documentType);
+                },
+              ),
             if (hasFile)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.danger,
+                ),
                 title: const Text(
                   'Remove File',
-                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.danger),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    color: AppColors.danger,
+                  ),
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
@@ -230,36 +264,53 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
 
   Future<void> _getImage(String documentType, ImageSource source) async {
     try {
-      String? filePath;
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
 
-      // Try FilePicker first for native desktop file selection without PlatformExceptions
-      try {
-        final FilePickerResult? result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
-        );
-        if (result != null && result.files.isNotEmpty) {
-          filePath = result.files.single.path;
-        }
-      } catch (_) {
-        // Fallback to ImagePicker if FilePicker is unavailable
-        final XFile? image = await _picker.pickImage(source: source);
-        filePath = image?.path;
-      }
-
-      if (filePath != null && filePath.isNotEmpty) {
-        final path = filePath;
+      if (image != null && image.path.isNotEmpty) {
         setState(() {
-          if (documentType == 'photo') _profilePhotoPath = path;
-          if (documentType == 'id') _idProofPath = path;
-          if (documentType == 'medical') _medicalReportsPath = path;
+          if (documentType == 'photo') _profilePhotoPath = image.path;
+          if (documentType == 'id') _idProofPath = image.path;
+          if (documentType == 'medical') _medicalReportsPath = image.path;
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not pick file: $e'),
+            content: Text('Could not pick image: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickDocument(String documentType) async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final filePath = result.files.single.path;
+        if (filePath != null && filePath.isNotEmpty) {
+          setState(() {
+            if (documentType == 'id') _idProofPath = filePath;
+            if (documentType == 'medical') _medicalReportsPath = filePath;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not pick document: $e'),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -862,7 +913,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
             children: [
               Icon(
                 isUploaded ? Icons.check_circle_rounded : icon,
-                color: isUploaded ? AppColors.accentGreen : AppColors.tealPrimary,
+                color: isUploaded
+                    ? AppColors.accentGreen
+                    : AppColors.tealPrimary,
                 size: 24,
               ),
               const SizedBox(height: 6),
@@ -873,7 +926,9 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
                   fontFamily: 'Poppins',
                   fontSize: 11,
                   fontWeight: isUploaded ? FontWeight.w700 : FontWeight.w500,
-                  color: isUploaded ? AppColors.accentGreen : AppColors.tealPrimary,
+                  color: isUploaded
+                      ? AppColors.accentGreen
+                      : AppColors.tealPrimary,
                 ),
               ),
             ],

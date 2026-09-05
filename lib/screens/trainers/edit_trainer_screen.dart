@@ -47,7 +47,14 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
 
   static const _genders = ['Male', 'Female', 'Other'];
   static const _bloodGroups = [
-    'A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-',
+    'A+',
+    'A-',
+    'B+',
+    'B-',
+    'O+',
+    'O-',
+    'AB+',
+    'AB-',
   ];
 
   @override
@@ -61,7 +68,9 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
     _mobileController = TextEditingController(text: t.mobileNumber ?? '');
     _emailController = TextEditingController(text: t.email ?? '');
     _addressController = TextEditingController(text: t.address ?? '');
-    _qualificationController = TextEditingController(text: t.qualification ?? '');
+    _qualificationController = TextEditingController(
+      text: t.qualification ?? '',
+    );
     _experienceController = TextEditingController(text: t.experience ?? '');
     _shiftStartController = TextEditingController(text: t.shiftStart ?? '');
     _shiftEndController = TextEditingController(text: t.shiftEnd ?? '');
@@ -72,7 +81,9 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
 
     // Ensure gender/blood group defaults are valid list entries
     _gender = _genders.contains(t.gender) ? t.gender! : _genders.first;
-    _bloodGroup = _bloodGroups.contains(t.bloodGroup) ? t.bloodGroup! : _bloodGroups.first;
+    _bloodGroup = _bloodGroups.contains(t.bloodGroup)
+        ? t.bloodGroup!
+        : _bloodGroups.first;
 
     _profilePhotoPath = t.profilePhotoPath;
     _idProofPath = t.idProofPath;
@@ -106,22 +117,40 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
       name: _nameController.text.trim(),
       age: int.tryParse(_ageController.text.trim()) ?? widget.trainer.age,
       gender: _gender,
-      dob: _dobController.text.trim().isEmpty ? null : _dobController.text.trim(),
+      dob: _dobController.text.trim().isEmpty
+          ? null
+          : _dobController.text.trim(),
       bloodGroup: _bloodGroup,
-      mobileNumber: _mobileController.text.trim().isEmpty ? null : _mobileController.text.trim(),
-      email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
-      address: _addressController.text.trim().isEmpty ? null : _addressController.text.trim(),
+      mobileNumber: _mobileController.text.trim().isEmpty
+          ? null
+          : _mobileController.text.trim(),
+      email: _emailController.text.trim().isEmpty
+          ? null
+          : _emailController.text.trim(),
+      address: _addressController.text.trim().isEmpty
+          ? null
+          : _addressController.text.trim(),
       profilePhotoPath: _profilePhotoPath,
       idProofPath: _idProofPath,
-      qualification: _qualificationController.text.trim().isEmpty ? null : _qualificationController.text.trim(),
+      qualification: _qualificationController.text.trim().isEmpty
+          ? null
+          : _qualificationController.text.trim(),
       certificatePhotoPath: _certificatePhotoPath,
-      experience: _experienceController.text.trim().isEmpty ? null : _experienceController.text.trim(),
-      shiftStart: _shiftStartController.text.trim().isEmpty ? null : _shiftStartController.text.trim(),
-      shiftEnd: _shiftEndController.text.trim().isEmpty ? null : _shiftEndController.text.trim(),
+      experience: _experienceController.text.trim().isEmpty
+          ? null
+          : _experienceController.text.trim(),
+      shiftStart: _shiftStartController.text.trim().isEmpty
+          ? null
+          : _shiftStartController.text.trim(),
+      shiftEnd: _shiftEndController.text.trim().isEmpty
+          ? null
+          : _shiftEndController.text.trim(),
       joiningDate: _joiningDateController.text.trim().isEmpty
           ? widget.trainer.joiningDate
           : _joiningDateController.text.trim(),
-      salary: double.tryParse(_salaryController.text.trim()) ?? widget.trainer.salary,
+      salary:
+          double.tryParse(_salaryController.text.trim()) ??
+          widget.trainer.salary,
     );
 
     final provider = context.read<TrainerProvider>();
@@ -142,7 +171,8 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            provider.errorMessage ?? 'Failed to update trainer. Please try again.',
+            provider.errorMessage ??
+                'Failed to update trainer. Please try again.',
           ),
           backgroundColor: AppColors.danger,
         ),
@@ -151,7 +181,8 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
   }
 
   Future<void> _showUploadOptions(String documentType) async {
-    final bool hasFile = (documentType == 'photo' && _profilePhotoPath != null) ||
+    final bool hasFile =
+        (documentType == 'photo' && _profilePhotoPath != null) ||
         (documentType == 'id' && _idProofPath != null) ||
         (documentType == 'certificate' && _certificatePhotoPath != null);
 
@@ -164,34 +195,69 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.tealPrimary),
-              title: const Text('Take Photo', style: TextStyle(fontFamily: 'Poppins')),
+              leading: const Icon(
+                Icons.camera_alt_outlined,
+                color: AppColors.tealPrimary,
+              ),
+              title: const Text(
+                'Take Photo',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _getImage(documentType, ImageSource.camera);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.tealPrimary),
-              title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Poppins')),
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.tealPrimary,
+              ),
+              title: const Text(
+                'Choose from Gallery',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _getImage(documentType, ImageSource.gallery);
               },
             ),
+            if (documentType != 'photo')
+              ListTile(
+                leading: const Icon(
+                  Icons.description_outlined,
+                  color: AppColors.tealPrimary,
+                ),
+                title: const Text(
+                  'Upload Document (PDF/File)',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickDocument(documentType);
+                },
+              ),
             if (hasFile)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.danger,
+                ),
                 title: const Text(
                   'Remove File',
-                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.danger),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    color: AppColors.danger,
+                  ),
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
                   setState(() {
                     if (documentType == 'photo') _profilePhotoPath = null;
                     if (documentType == 'id') _idProofPath = null;
-                    if (documentType == 'certificate') _certificatePhotoPath = null;
+                    if (documentType == 'certificate') {
+                      _certificatePhotoPath = null;
+                    }
                   });
                 },
               ),
@@ -203,32 +269,53 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
 
   Future<void> _getImage(String documentType, ImageSource source) async {
     try {
-      String? filePath;
-      try {
-        final FilePickerResult? result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
-        );
-        if (result != null && result.files.isNotEmpty) {
-          filePath = result.files.single.path;
-        }
-      } catch (_) {
-        final XFile? image = await _picker.pickImage(source: source);
-        filePath = image?.path;
-      }
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
 
-      if (filePath != null && filePath.isNotEmpty) {
+      if (image != null && image.path.isNotEmpty) {
         setState(() {
-          if (documentType == 'photo') _profilePhotoPath = filePath;
-          if (documentType == 'id') _idProofPath = filePath;
-          if (documentType == 'certificate') _certificatePhotoPath = filePath;
+          if (documentType == 'photo') _profilePhotoPath = image.path;
+          if (documentType == 'id') _idProofPath = image.path;
+          if (documentType == 'certificate') _certificatePhotoPath = image.path;
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not pick file: $e'),
+            content: Text('Could not pick image: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickDocument(String documentType) async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final filePath = result.files.single.path;
+        if (filePath != null && filePath.isNotEmpty) {
+          setState(() {
+            if (documentType == 'id') _idProofPath = filePath;
+            if (documentType == 'certificate') _certificatePhotoPath = filePath;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not pick document: $e'),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -360,7 +447,10 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                               controller: _nameController,
                               style: _inputStyle,
                               decoration: _inputDecor('Enter full name'),
-                              validator: (v) => AppValidators.validateRequired(v, 'Full Name'),
+                              validator: (v) => AppValidators.validateRequired(
+                                v,
+                                'Full Name',
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -374,7 +464,11 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                                     keyboardType: TextInputType.number,
                                     style: _inputStyle,
                                     decoration: _inputDecor('Years'),
-                                    validator: (v) => AppValidators.validateRequired(v, 'Age'),
+                                    validator: (v) =>
+                                        AppValidators.validateRequired(
+                                          v,
+                                          'Age',
+                                        ),
                                   ),
                                 ),
                               ),
@@ -385,11 +479,23 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                                   child: DropdownButtonFormField<String>(
                                     initialValue: _gender,
                                     style: _inputStyle,
-                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF667085)),
+                                    icon: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Color(0xFF667085),
+                                    ),
                                     decoration: _inputDecor('Select'),
-                                    items: _genders.map((g) => DropdownMenuItem(value: g, child: Text(g, style: _inputStyle))).toList(),
+                                    items: _genders
+                                        .map(
+                                          (g) => DropdownMenuItem(
+                                            value: g,
+                                            child: Text(g, style: _inputStyle),
+                                          ),
+                                        )
+                                        .toList(),
                                     onChanged: (v) {
-                                      if (v != null) setState(() => _gender = v);
+                                      if (v != null) {
+                                        setState(() => _gender = v);
+                                      }
                                     },
                                   ),
                                 ),
@@ -418,11 +524,23 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                                   child: DropdownButtonFormField<String>(
                                     initialValue: _bloodGroup,
                                     style: _inputStyle,
-                                    icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF667085)),
+                                    icon: const Icon(
+                                      Icons.keyboard_arrow_down_rounded,
+                                      color: Color(0xFF667085),
+                                    ),
                                     decoration: _inputDecor('Select'),
-                                    items: _bloodGroups.map((b) => DropdownMenuItem(value: b, child: Text(b, style: _inputStyle))).toList(),
+                                    items: _bloodGroups
+                                        .map(
+                                          (b) => DropdownMenuItem(
+                                            value: b,
+                                            child: Text(b, style: _inputStyle),
+                                          ),
+                                        )
+                                        .toList(),
                                     onChanged: (v) {
-                                      if (v != null) setState(() => _bloodGroup = v);
+                                      if (v != null) {
+                                        setState(() => _bloodGroup = v);
+                                      }
                                     },
                                   ),
                                 ),
@@ -493,7 +611,10 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                       const SizedBox(height: 20),
 
                       // ── QUALIFICATION DETAILS ────────────────────────
-                      _buildSectionHeader(title: 'Qualification Details', icon: Icons.school_outlined),
+                      _buildSectionHeader(
+                        title: 'Qualification Details',
+                        icon: Icons.school_outlined,
+                      ),
                       const SizedBox(height: 10),
                       _buildCardContainer(
                         children: [
@@ -503,7 +624,9 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                               controller: _qualificationController,
                               maxLines: 2,
                               style: _inputStyle,
-                              decoration: _inputDecor('Enter qualification (e.g., Certified Personal Trainer)'),
+                              decoration: _inputDecor(
+                                'Enter qualification (e.g., Certified Personal Trainer)',
+                              ),
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -523,7 +646,10 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                       const SizedBox(height: 20),
 
                       // ── PROFESSIONAL DETAILS ─────────────────────────
-                      _buildSectionHeader(title: 'Professional Details', icon: Icons.work_outline),
+                      _buildSectionHeader(
+                        title: 'Professional Details',
+                        icon: Icons.work_outline,
+                      ),
                       const SizedBox(height: 10),
                       _buildCardContainer(
                         children: [
@@ -547,7 +673,8 @@ class _EditTrainerScreenState extends State<EditTrainerScreen> {
                                     controller: _shiftStartController,
                                     readOnly: true,
                                     style: _inputStyle,
-                                    onTap: () => _pickTime(_shiftStartController),
+                                    onTap: () =>
+                                        _pickTime(_shiftStartController),
                                     decoration: _inputDecor('09:00 AM'),
                                   ),
                                 ),
@@ -778,7 +905,9 @@ class _DashedUploadBox extends StatelessWidget {
               Icon(
                 isUploaded ? Icons.check_circle_outline : icon,
                 size: 22,
-                color: isUploaded ? AppColors.accentGreen : const Color(0xFF008080),
+                color: isUploaded
+                    ? AppColors.accentGreen
+                    : const Color(0xFF008080),
               ),
               const SizedBox(height: 4),
               Text(
@@ -788,7 +917,9 @@ class _DashedUploadBox extends StatelessWidget {
                   fontFamily: 'Poppins',
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: isUploaded ? AppColors.accentGreen : const Color(0xFF475467),
+                  color: isUploaded
+                      ? AppColors.accentGreen
+                      : const Color(0xFF475467),
                 ),
               ),
             ],

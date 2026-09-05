@@ -166,6 +166,21 @@ class _AddTrainerScreenState extends State<AddTrainerScreen> {
                 _getImage(documentType, ImageSource.gallery);
               },
             ),
+            if (documentType != 'photo')
+              ListTile(
+                leading: const Icon(
+                  Icons.description_outlined,
+                  color: AppColors.tealPrimary,
+                ),
+                title: const Text(
+                  'Upload Document (PDF/File)',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickDocument(documentType);
+                },
+              ),
             if (hasFile)
               ListTile(
                 leading: const Icon(
@@ -198,33 +213,53 @@ class _AddTrainerScreenState extends State<AddTrainerScreen> {
 
   Future<void> _getImage(String documentType, ImageSource source) async {
     try {
-      String? filePath;
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
 
-      try {
-        final FilePickerResult? result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
-        );
-        if (result != null && result.files.isNotEmpty) {
-          filePath = result.files.single.path;
-        }
-      } catch (_) {
-        final XFile? image = await _picker.pickImage(source: source);
-        filePath = image?.path;
-      }
-
-      if (filePath != null && filePath.isNotEmpty) {
+      if (image != null && image.path.isNotEmpty) {
         setState(() {
-          if (documentType == 'photo') _profilePhotoPath = filePath;
-          if (documentType == 'id') _idProofPath = filePath;
-          if (documentType == 'certificate') _certificatePhotoPath = filePath;
+          if (documentType == 'photo') _profilePhotoPath = image.path;
+          if (documentType == 'id') _idProofPath = image.path;
+          if (documentType == 'certificate') _certificatePhotoPath = image.path;
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not pick file: $e'),
+            content: Text('Could not pick image: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickDocument(String documentType) async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final filePath = result.files.single.path;
+        if (filePath != null && filePath.isNotEmpty) {
+          setState(() {
+            if (documentType == 'id') _idProofPath = filePath;
+            if (documentType == 'certificate') _certificatePhotoPath = filePath;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not pick document: $e'),
             backgroundColor: AppColors.danger,
           ),
         );

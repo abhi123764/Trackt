@@ -130,7 +130,9 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
         ? m.emotionalHealth
         : null;
 
-    _preferredTimeController = TextEditingController(text: m.preferredTime ?? '');
+    _preferredTimeController = TextEditingController(
+      text: m.preferredTime ?? '',
+    );
     _selectedPlanId = m.planId;
     _selectedTrainerId = m.trainerId;
     _status = m.status;
@@ -150,7 +152,8 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
       final hm = h / 100;
       final bmi = w / (hm * hm);
       _bmiController.text = bmi.toStringAsFixed(1);
-    } else if (_heightController.text.isEmpty || _weightController.text.isEmpty) {
+    } else if (_heightController.text.isEmpty ||
+        _weightController.text.isEmpty) {
       _bmiController.text = '';
     }
   }
@@ -186,7 +189,9 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
           : _emailController.text.trim(),
       gender: _gender,
       bloodGroup: _bloodGroup,
-      dob: _dobController.text.trim().isEmpty ? null : _dobController.text.trim(),
+      dob: _dobController.text.trim().isEmpty
+          ? null
+          : _dobController.text.trim(),
       address: _addressController.text.trim().isEmpty
           ? null
           : _addressController.text.trim(),
@@ -240,7 +245,8 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
   }
 
   Future<void> _showUploadOptions(String documentType) async {
-    final bool hasFile = (documentType == 'photo' && _profilePhotoPath != null) ||
+    final bool hasFile =
+        (documentType == 'photo' && _profilePhotoPath != null) ||
         (documentType == 'id' && _idProofPath != null) ||
         (documentType == 'medical' && _medicalReportsPath != null);
 
@@ -253,27 +259,60 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
         child: Wrap(
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt_outlined, color: AppColors.tealPrimary),
-              title: const Text('Take Photo', style: TextStyle(fontFamily: 'Poppins')),
+              leading: const Icon(
+                Icons.camera_alt_outlined,
+                color: AppColors.tealPrimary,
+              ),
+              title: const Text(
+                'Take Photo',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _getImage(documentType, ImageSource.camera);
               },
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library_outlined, color: AppColors.tealPrimary),
-              title: const Text('Choose from Gallery', style: TextStyle(fontFamily: 'Poppins')),
+              leading: const Icon(
+                Icons.photo_library_outlined,
+                color: AppColors.tealPrimary,
+              ),
+              title: const Text(
+                'Choose from Gallery',
+                style: TextStyle(fontFamily: 'Poppins'),
+              ),
               onTap: () {
                 Navigator.of(ctx).pop();
                 _getImage(documentType, ImageSource.gallery);
               },
             ),
+            if (documentType != 'photo')
+              ListTile(
+                leading: const Icon(
+                  Icons.description_outlined,
+                  color: AppColors.tealPrimary,
+                ),
+                title: const Text(
+                  'Upload Document (PDF/File)',
+                  style: TextStyle(fontFamily: 'Poppins'),
+                ),
+                onTap: () {
+                  Navigator.of(ctx).pop();
+                  _pickDocument(documentType);
+                },
+              ),
             if (hasFile)
               ListTile(
-                leading: const Icon(Icons.delete_outline, color: AppColors.danger),
+                leading: const Icon(
+                  Icons.delete_outline,
+                  color: AppColors.danger,
+                ),
                 title: const Text(
                   'Remove File',
-                  style: TextStyle(fontFamily: 'Poppins', color: AppColors.danger),
+                  style: TextStyle(
+                    fontFamily: 'Poppins',
+                    color: AppColors.danger,
+                  ),
                 ),
                 onTap: () {
                   Navigator.of(ctx).pop();
@@ -292,34 +331,53 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
 
   Future<void> _getImage(String documentType, ImageSource source) async {
     try {
-      String? filePath;
+      final XFile? image = await _picker.pickImage(
+        source: source,
+        maxWidth: 1920,
+        maxHeight: 1920,
+        imageQuality: 85,
+      );
 
-      try {
-        final FilePickerResult? result = await FilePicker.platform.pickFiles(
-          type: FileType.custom,
-          allowedExtensions: ['jpg', 'jpeg', 'png', 'pdf', 'doc', 'docx'],
-        );
-        if (result != null && result.files.isNotEmpty) {
-          filePath = result.files.single.path;
-        }
-      } catch (_) {
-        final XFile? image = await _picker.pickImage(source: source);
-        filePath = image?.path;
-      }
-
-      if (filePath != null && filePath.isNotEmpty) {
-        final path = filePath;
+      if (image != null && image.path.isNotEmpty) {
         setState(() {
-          if (documentType == 'photo') _profilePhotoPath = path;
-          if (documentType == 'id') _idProofPath = path;
-          if (documentType == 'medical') _medicalReportsPath = path;
+          if (documentType == 'photo') _profilePhotoPath = image.path;
+          if (documentType == 'id') _idProofPath = image.path;
+          if (documentType == 'medical') _medicalReportsPath = image.path;
         });
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Could not pick file: $e'),
+            content: Text('Could not pick image: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _pickDocument(String documentType) async {
+    try {
+      final FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
+      );
+
+      if (result != null && result.files.isNotEmpty) {
+        final filePath = result.files.single.path;
+        if (filePath != null && filePath.isNotEmpty) {
+          setState(() {
+            if (documentType == 'id') _idProofPath = filePath;
+            if (documentType == 'medical') _medicalReportsPath = filePath;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not pick document: $e'),
             backgroundColor: AppColors.danger,
           ),
         );
@@ -795,7 +853,10 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
                                     color: Colors.white,
                                   ),
                                 )
-                              : const Icon(Icons.check_circle_outline, size: 22),
+                              : const Icon(
+                                  Icons.check_circle_outline,
+                                  size: 22,
+                                ),
                           label: Text(
                             _isSubmitting
                                 ? 'Updating Profile...'
@@ -922,7 +983,9 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
             children: [
               Icon(
                 isUploaded ? Icons.check_circle_rounded : icon,
-                color: isUploaded ? AppColors.accentGreen : AppColors.tealPrimary,
+                color: isUploaded
+                    ? AppColors.accentGreen
+                    : AppColors.tealPrimary,
                 size: 24,
               ),
               const SizedBox(height: 6),
@@ -933,7 +996,9 @@ class _EditMemberScreenState extends State<EditMemberScreen> {
                   fontFamily: 'Poppins',
                   fontSize: 11,
                   fontWeight: isUploaded ? FontWeight.w700 : FontWeight.w500,
-                  color: isUploaded ? AppColors.accentGreen : AppColors.tealPrimary,
+                  color: isUploaded
+                      ? AppColors.accentGreen
+                      : AppColors.tealPrimary,
                 ),
               ),
             ],
