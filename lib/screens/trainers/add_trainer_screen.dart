@@ -1,12 +1,12 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../providers/auth_provider.dart';
 import '../../providers/trainer_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/formatters.dart';
 import '../../utils/validators.dart';
+import 'widgets/trainer_upload_picker_sheet.dart';
 
 class AddTrainerScreen extends StatefulWidget {
   const AddTrainerScreen({super.key});
@@ -17,7 +17,6 @@ class AddTrainerScreen extends StatefulWidget {
 
 class _AddTrainerScreenState extends State<AddTrainerScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
 
   // File Upload Paths
@@ -124,147 +123,27 @@ class _AddTrainerScreenState extends State<AddTrainerScreen> {
     }
   }
 
-  Future<void> _showUploadOptions(String documentType) async {
+  void _showUploadOptions(String documentType) {
     final bool hasFile =
         (documentType == 'photo' && _profilePhotoPath != null) ||
         (documentType == 'id' && _idProofPath != null) ||
         (documentType == 'certificate' && _certificatePhotoPath != null);
 
-    showModalBottomSheet(
+    showTrainerUploadPicker(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(
-                Icons.camera_alt_outlined,
-                color: AppColors.tealPrimary,
-              ),
-              title: const Text(
-                'Take Photo',
-                style: TextStyle(fontFamily: 'Poppins'),
-              ),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _getImage(documentType, ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_library_outlined,
-                color: AppColors.tealPrimary,
-              ),
-              title: const Text(
-                'Choose from Gallery',
-                style: TextStyle(fontFamily: 'Poppins'),
-              ),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _getImage(documentType, ImageSource.gallery);
-              },
-            ),
-            if (documentType != 'photo')
-              ListTile(
-                leading: const Icon(
-                  Icons.description_outlined,
-                  color: AppColors.tealPrimary,
-                ),
-                title: const Text(
-                  'Upload Document (PDF/File)',
-                  style: TextStyle(fontFamily: 'Poppins'),
-                ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _pickDocument(documentType);
-                },
-              ),
-            if (hasFile)
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_outline,
-                  color: AppColors.danger,
-                ),
-                title: const Text(
-                  'Remove File',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    color: AppColors.danger,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  setState(() {
-                    if (documentType == 'photo') _profilePhotoPath = null;
-                    if (documentType == 'id') _idProofPath = null;
-                    if (documentType == 'certificate') {
-                      _certificatePhotoPath = null;
-                    }
-                  });
-                },
-              ),
-          ],
-        ),
-      ),
+      documentType: documentType,
+      hasFile: hasFile,
+      onFilePicked: (path) => setState(() {
+        if (documentType == 'photo') _profilePhotoPath = path;
+        if (documentType == 'id') _idProofPath = path;
+        if (documentType == 'certificate') _certificatePhotoPath = path;
+      }),
+      onRemove: () => setState(() {
+        if (documentType == 'photo') _profilePhotoPath = null;
+        if (documentType == 'id') _idProofPath = null;
+        if (documentType == 'certificate') _certificatePhotoPath = null;
+      }),
     );
-  }
-
-  Future<void> _getImage(String documentType, ImageSource source) async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null && image.path.isNotEmpty) {
-        setState(() {
-          if (documentType == 'photo') _profilePhotoPath = image.path;
-          if (documentType == 'id') _idProofPath = image.path;
-          if (documentType == 'certificate') _certificatePhotoPath = image.path;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not pick image: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _pickDocument(String documentType) async {
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        final filePath = result.files.single.path;
-        if (filePath != null && filePath.isNotEmpty) {
-          setState(() {
-            if (documentType == 'id') _idProofPath = filePath;
-            if (documentType == 'certificate') _certificatePhotoPath = filePath;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not pick document: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _pickDate(TextEditingController controller) async {
@@ -282,8 +161,7 @@ class _AddTrainerScreenState extends State<AddTrainerScreen> {
     );
     if (picked != null) {
       setState(() {
-        controller.text =
-            '${picked.month.toString().padLeft(2, '0')}/${picked.day.toString().padLeft(2, '0')}/${picked.year}';
+        controller.text = AppFormatters.formatDate(picked);
       });
     }
   }
@@ -309,9 +187,7 @@ class _AddTrainerScreenState extends State<AddTrainerScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthProvider>().currentUser;
-    final initial = (currentUser != null && currentUser.fName.isNotEmpty)
-        ? currentUser.fName[0].toUpperCase()
-        : 'A';
+    final initial = currentUser?.initial ?? 'U';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),

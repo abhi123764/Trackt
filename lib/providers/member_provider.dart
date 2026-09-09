@@ -55,10 +55,11 @@ class MemberProvider extends ChangeNotifier {
   Attendance? getTodayAttendance(int memberId) => _todayAttendance[memberId];
 
   bool get hasActiveFilters =>
-      _statusFilter != 'All' ||
-      _genderFilter != 'All' ||
-      _planFilter != null ||
-      _sortOption != MemberSortOption.nameAsc;
+      _statusFilter != 'All' || _genderFilter != 'All' || _planFilter != null;
+
+  bool get isSorted => _sortOption != MemberSortOption.nameAsc;
+
+  bool get hasActiveFiltersOrSort => hasActiveFilters || isSorted;
 
   List<Member> get filteredMembers {
     final list = _members.where((m) {

@@ -1,3 +1,23 @@
+import '../utils/formatters.dart';
+
+class MembershipStatus {
+  final DateTime startDate;
+  final DateTime endDate;
+  final int daysLeft;
+  final bool isExpired;
+  final String daysLeftText;
+  final String dateRangeText;
+
+  const MembershipStatus({
+    required this.startDate,
+    required this.endDate,
+    required this.daysLeft,
+    required this.isExpired,
+    required this.daysLeftText,
+    required this.dateRangeText,
+  });
+}
+
 class Member {
   final int? id;
   final String name;
@@ -56,6 +76,45 @@ class Member {
     this.status = 'Active',
     required this.joinDate,
   });
+
+  /// Computes membership dates, remaining days, and expiry status.
+  MembershipStatus getMembershipStatus({int planDurationDays = 30}) {
+    DateTime startDate;
+    try {
+      startDate = DateTime.parse(joinDate);
+    } catch (_) {
+      startDate = AppFormatters.parseDate(joinDate) ?? DateTime.now();
+    }
+
+    final endDate = startDate.add(Duration(days: planDurationDays));
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endDay = DateTime(endDate.year, endDate.month, endDate.day);
+    final daysLeft = endDay.difference(today).inDays;
+
+    final isExpired =
+        status.toLowerCase() == 'inactive' ||
+        status.toLowerCase() == 'expired' ||
+        daysLeft < 0;
+
+    final daysLeftText = isExpired
+        ? 'Expired'
+        : daysLeft == 0
+        ? 'Expires Today'
+        : '$daysLeft Days Left';
+
+    final dateRangeText =
+        '${AppFormatters.formatDisplayDate(startDate)} - ${AppFormatters.formatDisplayDate(endDate)}';
+
+    return MembershipStatus(
+      startDate: startDate,
+      endDate: endDate,
+      daysLeft: daysLeft,
+      isExpired: isExpired,
+      daysLeftText: daysLeftText,
+      dateRangeText: dateRangeText,
+    );
+  }
 
   Map<String, dynamic> toMap() {
     return {

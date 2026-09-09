@@ -22,6 +22,8 @@ class AppUser {
     this.languagePreference = 'English',
     required this.createdAt,
   });
+  String get initial => fName.isNotEmpty ? fName[0].toUpperCase() : 'U';
+  String get fullName => '$fName $lName'.trim();
 
   Map<String, dynamic> toMap() {
     return {

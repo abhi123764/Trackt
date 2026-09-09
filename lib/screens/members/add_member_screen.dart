@@ -1,12 +1,13 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../../providers/auth_provider.dart';
 import '../../../providers/member_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/formatters.dart';
+import '../../../utils/health_calculators.dart';
 import '../../../utils/validators.dart';
+import 'widgets/member_upload_picker_sheet.dart';
 
 class AddMemberScreen extends StatefulWidget {
   const AddMemberScreen({super.key});
@@ -17,7 +18,6 @@ class AddMemberScreen extends StatefulWidget {
 
 class _AddMemberScreenState extends State<AddMemberScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ImagePicker _picker = ImagePicker();
   bool _isSubmitting = false;
 
   // File Upload Paths
@@ -95,15 +95,11 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   }
 
   void _calculateBmi() {
-    final h = double.tryParse(_heightController.text);
-    final w = double.tryParse(_weightController.text);
-    if (h != null && w != null && h > 0) {
-      final hm = h / 100;
-      final bmi = w / (hm * hm);
-      _bmiController.text = bmi.toStringAsFixed(1);
-    } else {
-      _bmiController.text = '';
-    }
+    final bmi = HealthCalculators.calculateBmi(
+      heightCm: double.tryParse(_heightController.text),
+      weightKg: double.tryParse(_weightController.text),
+    );
+    _bmiController.text = bmi != null ? bmi.toStringAsFixed(1) : '';
   }
 
   @override
@@ -177,145 +173,27 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     }
   }
 
-  Future<void> _showUploadOptions(String documentType) async {
+  void _showUploadOptions(String documentType) {
     final bool hasFile =
         (documentType == 'photo' && _profilePhotoPath != null) ||
         (documentType == 'id' && _idProofPath != null) ||
         (documentType == 'medical' && _medicalReportsPath != null);
 
-    showModalBottomSheet(
+    showMemberUploadPicker(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(
-                Icons.camera_alt_outlined,
-                color: AppColors.tealPrimary,
-              ),
-              title: const Text(
-                'Take Photo',
-                style: TextStyle(fontFamily: 'Poppins'),
-              ),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _getImage(documentType, ImageSource.camera);
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.photo_library_outlined,
-                color: AppColors.tealPrimary,
-              ),
-              title: const Text(
-                'Choose from Gallery',
-                style: TextStyle(fontFamily: 'Poppins'),
-              ),
-              onTap: () {
-                Navigator.of(ctx).pop();
-                _getImage(documentType, ImageSource.gallery);
-              },
-            ),
-            if (documentType != 'photo')
-              ListTile(
-                leading: const Icon(
-                  Icons.description_outlined,
-                  color: AppColors.tealPrimary,
-                ),
-                title: const Text(
-                  'Upload Document (PDF/File)',
-                  style: TextStyle(fontFamily: 'Poppins'),
-                ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  _pickDocument(documentType);
-                },
-              ),
-            if (hasFile)
-              ListTile(
-                leading: const Icon(
-                  Icons.delete_outline,
-                  color: AppColors.danger,
-                ),
-                title: const Text(
-                  'Remove File',
-                  style: TextStyle(
-                    fontFamily: 'Poppins',
-                    color: AppColors.danger,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.of(ctx).pop();
-                  setState(() {
-                    if (documentType == 'photo') _profilePhotoPath = null;
-                    if (documentType == 'id') _idProofPath = null;
-                    if (documentType == 'medical') _medicalReportsPath = null;
-                  });
-                },
-              ),
-          ],
-        ),
-      ),
+      documentType: documentType,
+      hasFile: hasFile,
+      onImagePicked: (path) => setState(() {
+        if (documentType == 'photo') _profilePhotoPath = path;
+        if (documentType == 'id') _idProofPath = path;
+        if (documentType == 'medical') _medicalReportsPath = path;
+      }),
+      onRemove: () => setState(() {
+        if (documentType == 'photo') _profilePhotoPath = null;
+        if (documentType == 'id') _idProofPath = null;
+        if (documentType == 'medical') _medicalReportsPath = null;
+      }),
     );
-  }
-
-  Future<void> _getImage(String documentType, ImageSource source) async {
-    try {
-      final XFile? image = await _picker.pickImage(
-        source: source,
-        maxWidth: 1920,
-        maxHeight: 1920,
-        imageQuality: 85,
-      );
-
-      if (image != null && image.path.isNotEmpty) {
-        setState(() {
-          if (documentType == 'photo') _profilePhotoPath = image.path;
-          if (documentType == 'id') _idProofPath = image.path;
-          if (documentType == 'medical') _medicalReportsPath = image.path;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not pick image: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _pickDocument(String documentType) async {
-    try {
-      final FilePickerResult? result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'png'],
-      );
-
-      if (result != null && result.files.isNotEmpty) {
-        final filePath = result.files.single.path;
-        if (filePath != null && filePath.isNotEmpty) {
-          setState(() {
-            if (documentType == 'id') _idProofPath = filePath;
-            if (documentType == 'medical') _medicalReportsPath = filePath;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not pick document: $e'),
-            backgroundColor: AppColors.danger,
-          ),
-        );
-      }
-    }
   }
 
   Future<void> _pickDate() async {
@@ -333,8 +211,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
     );
     if (picked != null) {
       setState(() {
-        _dobController.text =
-            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+        _dobController.text = AppFormatters.formatDate(picked, dayFirst: true);
       });
     }
   }
@@ -342,9 +219,7 @@ class _AddMemberScreenState extends State<AddMemberScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthProvider>().currentUser;
-    final initial = (currentUser != null && currentUser.fName.isNotEmpty)
-        ? currentUser.fName[0].toUpperCase()
-        : 'U';
+    final initial = currentUser?.initial ?? 'U';
     final membershipPlans = context.watch<MemberProvider>().membershipPlans;
     final trainers = context.watch<MemberProvider>().trainers;
 

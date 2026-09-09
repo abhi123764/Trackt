@@ -3,10 +3,12 @@ import 'package:provider/provider.dart';
 
 import '../../models/member.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/dashboard_provider.dart';
 import '../../providers/member_provider.dart';
 import '../../theme/app_theme.dart';
 import 'add_member_screen.dart';
 import 'edit_member_screen.dart';
+import 'member_details_screen.dart';
 import 'widgets/member_card.dart';
 import 'widgets/member_filter_sheet.dart';
 import 'widgets/member_sort_sheet.dart';
@@ -20,6 +22,14 @@ class MembersScreen extends StatefulWidget {
 
 class _MembersScreenState extends State<MembersScreen> {
   final _searchController = TextEditingController();
+
+  void _navigateBackToDashboard() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      context.read<DashboardProvider>().setTab(0);
+    }
+  }
 
   @override
   void initState() {
@@ -45,6 +55,19 @@ class _MembersScreenState extends State<MembersScreen> {
     Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (_) => EditMemberScreen(member: member)));
+  }
+
+  void _openMemberDetails(Member member) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => MemberDetailsScreen(member: member),
+          ),
+        )
+        .then((_) {
+          if (!mounted) return;
+          context.read<MemberProvider>().fetchMembers();
+        });
   }
 
   void _openSortSheet() {
@@ -107,100 +130,121 @@ class _MembersScreenState extends State<MembersScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: Consumer<MemberProvider>(
-          builder: (context, provider, child) {
-            final membersList = provider.filteredMembers;
+    return PopScope(
+      canPop: Navigator.of(context).canPop(),
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          context.read<DashboardProvider>().setTab(0);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: SafeArea(
+          child: Consumer<MemberProvider>(
+            builder: (context, provider, child) {
+              final membersList = provider.filteredMembers;
 
-            return Column(
-              children: [
-                _buildHeader(context),
-                _buildSearchAndControlRow(provider),
-                _buildPlanFilterChips(provider),
-                const SizedBox(height: 8),
-                Expanded(
-                  child: provider.isLoading
-                      ? const Center(child: CircularProgressIndicator())
-                      : provider.errorMessage != null
-                      ? _buildErrorState(provider)
-                      : membersList.isEmpty
-                      ? _buildEmptyState(provider)
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
-                          itemCount: membersList.length,
-                          itemBuilder: (context, index) {
-                            final member = membersList[index];
-                            return MemberCard(
-                              member: member,
-                              onEdit: () => _openEditMemberDialog(member),
-                              onDelete: () => _confirmDelete(member),
-                            );
-                          },
-                        ),
-                ),
-              ],
-            );
-          },
+              return Column(
+                children: [
+                  _buildHeader(context),
+                  _buildSearchAndControlRow(provider),
+                  _buildPlanFilterChips(provider),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: provider.isLoading
+                        ? const Center(child: CircularProgressIndicator())
+                        : provider.errorMessage != null
+                        ? _buildErrorState(provider)
+                        : membersList.isEmpty
+                        ? _buildEmptyState(provider)
+                        : ListView.builder(
+                            padding: const EdgeInsets.fromLTRB(20, 8, 20, 80),
+                            itemCount: membersList.length,
+                            itemBuilder: (context, index) {
+                              final member = membersList[index];
+                              return MemberCard(
+                                member: member,
+                                onTap: () => _openMemberDetails(member),
+                                onEdit: () => _openEditMemberDialog(member),
+                                onDelete: () => _confirmDelete(member),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openAddMemberDialog,
-        backgroundColor: const Color(0xFF054446),
-        elevation: 4,
-        shape: const CircleBorder(),
-        child: const Icon(Icons.add, color: Colors.white, size: 28),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _openAddMemberDialog,
+          backgroundColor: const Color(0xFF054446),
+          elevation: 4,
+          shape: const CircleBorder(),
+          child: const Icon(Icons.add, color: Colors.white, size: 28),
+        ),
       ),
     );
   }
 
-  // 1. TOP HEADER (Members title, bell icon, user avatar)
+  // 1. TOP HEADER (Back button, Members title, bell icon, user avatar)
   Widget _buildHeader(BuildContext context) {
     final currentUser = context.watch<AuthProvider>().currentUser;
-    final initial = (currentUser != null && currentUser.fName.isNotEmpty)
-        ? currentUser.fName[0].toUpperCase()
-        : 'U';
+    final initial = currentUser?.initial ?? 'U';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Text(
-            'Members',
-            style: TextStyle(
-              fontFamily: 'Poppins',
-              fontSize: 24,
-              fontWeight: FontWeight.w800,
-              color: Color(0xFF054446),
+          InkWell(
+            onTap: _navigateBackToDashboard,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF2F4F7),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.arrow_back_ios_new,
+                size: 18,
+                color: Color(0xFF344054),
+              ),
             ),
           ),
-          Row(
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.notifications_none_outlined,
-                  color: Color(0xFF344054),
-                  size: 24,
-                ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Members',
+              style: TextStyle(
+                fontFamily: 'Poppins',
+                fontSize: 24,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF054446),
               ),
-              const SizedBox(width: 4),
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: const Color(0xFF054446),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    fontSize: 15,
-                  ),
-                ),
+            ),
+          ),
+          IconButton(
+            onPressed: () {},
+            icon: const Icon(
+              Icons.notifications_none_outlined,
+              color: Color(0xFF344054),
+              size: 24,
+            ),
+          ),
+          const SizedBox(width: 4),
+          CircleAvatar(
+            radius: 18,
+            backgroundColor: const Color(0xFF054446),
+            child: Text(
+              initial,
+              style: const TextStyle(
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w700,
+                color: Colors.white,
+                fontSize: 15,
               ),
-            ],
+            ),
           ),
         ],
       ),
@@ -209,11 +253,8 @@ class _MembersScreenState extends State<MembersScreen> {
 
   // 2. SEARCH & DUAL ACTION BUTTONS ROW (Search bar + Sort button + Filter button)
   Widget _buildSearchAndControlRow(MemberProvider provider) {
-    final bool isSorted = provider.sortOption != MemberSortOption.nameAsc;
-    final bool isFiltered =
-        provider.statusFilter != 'All' ||
-        provider.genderFilter != 'All' ||
-        provider.planFilter != null;
+    final bool isSorted = provider.isSorted;
+    final bool isFiltered = provider.hasActiveFilters;
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),

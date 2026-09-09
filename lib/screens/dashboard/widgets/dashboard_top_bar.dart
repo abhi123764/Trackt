@@ -23,9 +23,7 @@ class DashboardTopBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthProvider>().currentUser;
-    final initial = (currentUser != null && currentUser.fName.isNotEmpty)
-        ? currentUser.fName[0].toUpperCase()
-        : null;
+    final initial = currentUser?.initial;
 
     return Row(
       children: [
@@ -79,9 +77,7 @@ class DashboardTopBar extends StatelessWidget {
             PopupMenuItem<String>(
               enabled: false,
               child: Text(
-                currentUser != null
-                    ? '${currentUser.fName} ${currentUser.lName}'
-                    : 'Account',
+                currentUser?.fullName ?? 'Account',
                 style: const TextStyle(
                   fontWeight: FontWeight.w600,
                   color: AppColors.textPrimary,

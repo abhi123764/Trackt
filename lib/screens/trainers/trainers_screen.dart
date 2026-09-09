@@ -5,6 +5,8 @@ import '../../models/trainer.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/trainer_provider.dart';
 import '../../theme/app_theme.dart';
+import '../../utils/formatters.dart';
+import '../dashboard/dashboard_screen.dart';
 import 'add_trainer_screen.dart';
 import 'edit_trainer_screen.dart';
 import 'widgets/trainer_card.dart';
@@ -18,7 +20,16 @@ class TrainersScreen extends StatefulWidget {
 
 class _TrainersScreenState extends State<TrainersScreen> {
   final _searchController = TextEditingController();
-  String _searchQuery = '';
+
+  void _navigateBackToDashboard() {
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    } else {
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const DashboardScreen()),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -34,32 +45,26 @@ class _TrainersScreenState extends State<TrainersScreen> {
     super.dispose();
   }
 
-  List<Trainer> _filtered(List<Trainer> all) {
-    final q = _searchQuery.trim().toLowerCase();
-    if (q.isEmpty) return all;
-    return all.where((t) {
-      return t.name.toLowerCase().contains(q) ||
-          (t.qualification?.toLowerCase().contains(q) ?? false) ||
-          (t.email?.toLowerCase().contains(q) ?? false);
-    }).toList();
-  }
-
   void _openAddTrainer() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => const AddTrainerScreen())).then((_) {
-      if (!mounted) return;
-      context.read<TrainerProvider>().fetchTrainers();
-    });
+    Navigator.of(context)
+        .push(MaterialPageRoute(builder: (_) => const AddTrainerScreen()))
+        .then((_) {
+          if (!mounted) return;
+          context.read<TrainerProvider>().fetchTrainers();
+        });
   }
 
   void _openEditTrainer(Trainer trainer) {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute(builder: (_) => EditTrainerScreen(trainer: trainer))).then((_) {
-      if (!mounted) return;
-      context.read<TrainerProvider>().fetchTrainers();
-    });
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => EditTrainerScreen(trainer: trainer),
+          ),
+        )
+        .then((_) {
+          if (!mounted) return;
+          context.read<TrainerProvider>().fetchTrainers();
+        });
   }
 
   void _confirmDelete(Trainer trainer) {
@@ -106,20 +111,15 @@ class _TrainersScreenState extends State<TrainersScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUser = context.watch<AuthProvider>().currentUser;
-    final initial = (currentUser != null && currentUser.fName.isNotEmpty)
-        ? currentUser.fName[0].toUpperCase()
-        : 'U';
+    final initial = currentUser?.initial ?? 'U';
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Consumer<TrainerProvider>(
           builder: (context, provider, _) {
-            final trainers = _filtered(provider.trainers);
-            final double totalPayouts = provider.trainers.fold(
-              0.0,
-              (sum, t) => sum + t.salary,
-            );
+            final trainers = provider.filteredTrainers;
+            final double totalPayouts = provider.totalPayouts;
 
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,6 +129,23 @@ class _TrainersScreenState extends State<TrainersScreen> {
                   padding: const EdgeInsets.fromLTRB(20, 16, 16, 0),
                   child: Row(
                     children: [
+                      InkWell(
+                        onTap: _navigateBackToDashboard,
+                        borderRadius: BorderRadius.circular(10),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF2F4F7),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.arrow_back_ios_new,
+                            size: 18,
+                            color: Color(0xFF344054),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -194,7 +211,7 @@ class _TrainersScreenState extends State<TrainersScreen> {
                     ),
                     child: TextField(
                       controller: _searchController,
-                      onChanged: (v) => setState(() => _searchQuery = v),
+                      onChanged: provider.setSearchQuery,
                       textAlignVertical: TextAlignVertical.center,
                       decoration: InputDecoration(
                         hintText: 'Search by name or specialty...',
@@ -206,13 +223,15 @@ class _TrainersScreenState extends State<TrainersScreen> {
                         border: InputBorder.none,
                         enabledBorder: InputBorder.none,
                         focusedBorder: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12,
+                        ),
                         prefixIcon: const Icon(
                           Icons.search,
                           color: Color(0xFF667085),
                           size: 20,
                         ),
-                        suffixIcon: _searchQuery.isNotEmpty
+                        suffixIcon: provider.searchQuery.isNotEmpty
                             ? IconButton(
                                 icon: const Icon(
                                   Icons.clear,
@@ -221,7 +240,7 @@ class _TrainersScreenState extends State<TrainersScreen> {
                                 ),
                                 onPressed: () {
                                   _searchController.clear();
-                                  setState(() => _searchQuery = '');
+                                  provider.setSearchQuery('');
                                 },
                               )
                             : null,
@@ -241,18 +260,18 @@ class _TrainersScreenState extends State<TrainersScreen> {
                           ),
                         )
                       : provider.errorMessage != null
-                          ? _buildErrorState(provider)
-                          : trainers.isEmpty
-                              ? _buildEmptyState()
-                              : ListView.builder(
-                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                                  itemCount: trainers.length,
-                                  itemBuilder: (_, i) => TrainerCard(
-                                    trainer: trainers[i],
-                                    onEdit: () => _openEditTrainer(trainers[i]),
-                                    onDelete: () => _confirmDelete(trainers[i]),
-                                  ),
-                                ),
+                      ? _buildErrorState(provider)
+                      : trainers.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.builder(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+                          itemCount: trainers.length,
+                          itemBuilder: (_, i) => TrainerCard(
+                            trainer: trainers[i],
+                            onEdit: () => _openEditTrainer(trainers[i]),
+                            onDelete: () => _confirmDelete(trainers[i]),
+                          ),
+                        ),
                 ),
 
                 // ── SUMMARY STATS ROW ──────────────────────────────────
@@ -266,7 +285,8 @@ class _TrainersScreenState extends State<TrainersScreen> {
                             icon: Icons.trending_up_rounded,
                             iconColor: AppColors.tealPrimary,
                             label: 'Total Payouts',
-                            value: '₹${_formatAmount(totalPayouts)}',
+                            value:
+                                '₹${AppFormatters.formatAmount(totalPayouts)}',
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -282,7 +302,7 @@ class _TrainersScreenState extends State<TrainersScreen> {
                     ),
                   ),
                 const SizedBox(height: 76),
-            ],
+              ],
             );
           },
         ),
@@ -432,15 +452,5 @@ class _TrainersScreenState extends State<TrainersScreen> {
         ),
       ),
     );
-  }
-
-  String _formatAmount(double amount) {
-    if (amount >= 1000) {
-      return amount.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
-    }
-    return amount.toStringAsFixed(0);
   }
 }

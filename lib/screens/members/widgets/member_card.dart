@@ -1,20 +1,25 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/member.dart';
 import '../../../providers/member_provider.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/formatters.dart';
 
 class MemberCard extends StatefulWidget {
   final Member member;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const MemberCard({
     super.key,
     required this.member,
     required this.onEdit,
     required this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -22,17 +27,9 @@ class MemberCard extends StatefulWidget {
 }
 
 class _MemberCardState extends State<MemberCard> {
-  String _formatCurrentTime() {
-    final now = DateTime.now();
-    final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
-    final minute = now.minute.toString().padLeft(2, '0');
-    final period = now.hour >= 12 ? 'PM' : 'AM';
-    return '${hour.toString().padLeft(2, '0')}:$minute $period';
-  }
-
   Future<void> _handleCheckIn() async {
     if (widget.member.id == null) return;
-    final timeStr = _formatCurrentTime();
+    final timeStr = AppFormatters.formatTime(DateTime.now());
     final provider = context.read<MemberProvider>();
     final success = await provider.checkInMember(widget.member.id!, timeStr);
     if (mounted && success) {
@@ -48,7 +45,7 @@ class _MemberCardState extends State<MemberCard> {
 
   Future<void> _handleCheckOut() async {
     if (widget.member.id == null) return;
-    final timeStr = _formatCurrentTime();
+    final timeStr = AppFormatters.formatTime(DateTime.now());
     final provider = context.read<MemberProvider>();
     final success = await provider.checkOutMember(widget.member.id!, timeStr);
     if (mounted && success) {
@@ -100,33 +97,13 @@ class _MemberCardState extends State<MemberCard> {
         : null;
     final String trainerName = assignedTrainer?.name ?? 'Unassigned';
 
-    // Calculate dynamic dates and days left
-    DateTime startDate;
-    try {
-      startDate = DateTime.parse(member.joinDate);
-    } catch (_) {
-      startDate = DateTime.now();
-    }
-    final int duration = assignedPlan?.durationDays ?? 30;
-    final DateTime endDate = startDate.add(Duration(days: duration));
-    final DateTime now = DateTime.now();
-    final DateTime today = DateTime(now.year, now.month, now.day);
-    final DateTime endDay = DateTime(endDate.year, endDate.month, endDate.day);
-    final int daysLeft = endDay.difference(today).inDays;
-
-    final bool isExpired =
-        member.status.toLowerCase() == 'inactive' ||
-        member.status.toLowerCase() == 'expired' ||
-        daysLeft < 0;
-
-    final String daysLeftText = isExpired
-        ? 'Expired'
-        : daysLeft == 0
-        ? 'Expires Today'
-        : '$daysLeft Days Left';
-
-    final String dateRangeText =
-        '${_formatDate(startDate)} - ${_formatDate(endDate)}';
+    // Membership status & dates
+    final membershipStatus = member.getMembershipStatus(
+      planDurationDays: assignedPlan?.durationDays ?? 30,
+    );
+    final bool isExpired = membershipStatus.isExpired;
+    final String daysLeftText = membershipStatus.daysLeftText;
+    final String dateRangeText = membershipStatus.dateRangeText;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -142,29 +119,22 @@ class _MemberCardState extends State<MemberCard> {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: widget.onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
             // 1. TOP HEADER ROW (Avatar, Name, Plan Badge, Trainer, Edit/Delete)
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar
-                CircleAvatar(
-                  radius: 22,
-                  backgroundColor: _getAvatarBg(planName),
-                  child: Text(
-                    _getInitials(member.name),
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: _getAvatarTextColor(planName),
-                    ),
-                  ),
-                ),
+                // Avatar — shows uploaded photo or coloured initials
+                _buildAvatar(member, planName),
                 const SizedBox(width: 12),
 
                 // Name & Plan & Trainer
@@ -468,7 +438,9 @@ class _MemberCardState extends State<MemberCard> {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildTimeBox(String label, String time) {
@@ -544,9 +516,37 @@ class _MemberCardState extends State<MemberCard> {
     );
   }
 
+  Widget _buildAvatar(Member member, String planName) {
+    final bool hasPhoto = member.profilePhotoPath != null &&
+        member.profilePhotoPath!.trim().isNotEmpty &&
+        File(member.profilePhotoPath!).existsSync();
+
+    if (hasPhoto) {
+      return CircleAvatar(
+        radius: 22,
+        backgroundColor: _getAvatarBg(planName),
+        backgroundImage: FileImage(File(member.profilePhotoPath!)),
+      );
+    }
+
+    return CircleAvatar(
+      radius: 22,
+      backgroundColor: _getAvatarBg(planName),
+      child: Text(
+        _getInitials(member.name),
+        style: TextStyle(
+          fontFamily: 'Poppins',
+          fontSize: 15,
+          fontWeight: FontWeight.w700,
+          color: _getAvatarTextColor(planName),
+        ),
+      ),
+    );
+  }
+
   String _getInitials(String name) {
-    final parts = name.trim().split(' ');
-    if (parts.length >= 2) {
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length >= 2 && parts[0].isNotEmpty && parts[1].isNotEmpty) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
       return parts[0][0].toUpperCase();
@@ -576,23 +576,5 @@ class _MemberCardState extends State<MemberCard> {
       default:
         return const Color(0xFF344054);
     }
-  }
-
-  String _formatDate(DateTime date) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year}';
   }
 }

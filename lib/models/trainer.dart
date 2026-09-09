@@ -1,3 +1,5 @@
+import '../utils/formatters.dart';
+
 class Trainer {
   final int? id;
   final String name;
@@ -38,6 +40,29 @@ class Trainer {
     required this.joiningDate,
     this.salary = 0,
   });
+
+  /// Computes salary payment status from the trainer's joining date.
+  /// Returns a record: (isPaid, nextPaymentDate).
+  ({bool isPaid, DateTime nextPaymentDate}) get salaryStatus {
+    final today = DateTime.now();
+    DateTime? joined = AppFormatters.parseDate(joiningDate);
+    joined ??= today;
+
+    int year = today.year;
+    int month = today.month;
+    final payDay = joined.day.clamp(1, 28);
+
+    DateTime candidate = DateTime(year, month, payDay);
+
+    if (today.isBefore(candidate)) {
+      return (isPaid: true, nextPaymentDate: candidate);
+    } else {
+      final nextMonth = month == 12 ? 1 : month + 1;
+      final nextYear = month == 12 ? year + 1 : year;
+      final nextCandidate = DateTime(nextYear, nextMonth, payDay);
+      return (isPaid: false, nextPaymentDate: nextCandidate);
+    }
+  }
 
   Map<String, dynamic> toMap() {
     return {

@@ -8,10 +8,29 @@ class TrainerProvider extends ChangeNotifier {
   List<Trainer> _trainers = [];
   bool _isLoading = false;
   String? _errorMessage;
+  String _searchQuery = '';
 
   List<Trainer> get trainers => _trainers;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
+  String get searchQuery => _searchQuery;
+
+  void setSearchQuery(String query) {
+    _searchQuery = query;
+    notifyListeners();
+  }
+
+  List<Trainer> get filteredTrainers {
+    final q = _searchQuery.trim().toLowerCase();
+    if (q.isEmpty) return _trainers;
+    return _trainers.where((t) {
+      return t.name.toLowerCase().contains(q) ||
+          (t.qualification?.toLowerCase().contains(q) ?? false) ||
+          (t.email?.toLowerCase().contains(q) ?? false);
+    }).toList();
+  }
+
+  double get totalPayouts => _trainers.fold(0.0, (sum, t) => sum + t.salary);
 
   Future<void> fetchTrainers() async {
     _isLoading = true;

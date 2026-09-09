@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../models/trainer.dart';
 import '../../../theme/app_theme.dart';
+import '../../../utils/formatters.dart';
 
 class TrainerCard extends StatelessWidget {
   final Trainer trainer;
@@ -15,76 +16,14 @@ class TrainerCard extends StatelessWidget {
     required this.onDelete,
   });
 
-  /// Computes salary payment status from the trainer's joining date.
-  ///
-  /// Salary is paid on the same calendar day every month (the joining day).
-  /// - If today is BEFORE the next due date → PAID (payment not yet due).
-  /// - If today is ON or AFTER the next due date → DUE.
-  ///
-  /// Returns a record: (isPaid, nextPaymentDate).
-  ({bool isPaid, DateTime nextPaymentDate}) get _salaryStatus {
-    final today = DateTime.now();
-
-    // Try parsing the stored joiningDate.  It may be ISO (YYYY-MM-DD) or
-    // mm/dd/yyyy depending on how the user entered it.
-    DateTime? joined = _parseDate(trainer.joiningDate);
-    joined ??= today; // fallback: treat as just joined → paid
-
-    // Find the next payment date after today.
-    // Start from the joining month in the current year and step forward.
-    int year = today.year;
-    int month = today.month;
-    final payDay = joined.day.clamp(1, 28); // safe across all months
-
-    DateTime candidate = DateTime(year, month, payDay);
-
-    // If this month's payment date has already passed (or is today → DUE),
-    // move to next month.
-    if (today.isBefore(candidate)) {
-      // today < candidate → this month's payment hasn't come yet → PAID
-      return (isPaid: true, nextPaymentDate: candidate);
-    } else {
-      // today >= candidate → payment is due or overdue
-      // Compute the NEXT month's date so we can show it when paid next time.
-      final nextMonth = month == 12 ? 1 : month + 1;
-      final nextYear = month == 12 ? year + 1 : year;
-      final nextCandidate = DateTime(nextYear, nextMonth, payDay);
-      return (isPaid: false, nextPaymentDate: nextCandidate);
-    }
-  }
-
-  static DateTime? _parseDate(String raw) {
-    if (raw.isEmpty) return null;
-    // ISO format: YYYY-MM-DD
-    if (raw.contains('-') && raw.length == 10) {
-      return DateTime.tryParse(raw);
-    }
-    // mm/dd/yyyy or dd/mm/yyyy (we stored as mm/dd/yyyy in pickers)
-    final parts = raw.split('/');
-    if (parts.length == 3) {
-      final a = int.tryParse(parts[0]);
-      final b = int.tryParse(parts[1]);
-      final y = int.tryParse(parts[2]);
-      if (a != null && b != null && y != null && y > 1900) {
-        return DateTime(y, a, b); // mm/dd/yyyy
-      }
-    }
-    return DateTime.tryParse(raw);
-  }
-
-  static String _formatDate(DateTime d) {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-    ];
-    return '${d.day.toString().padLeft(2, '0')} ${months[d.month - 1]} ${d.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final status = _salaryStatus;
+    final status = trainer.salaryStatus;
     final bool isPaid = status.isPaid;
-    final String nextDateStr = _formatDate(status.nextPaymentDate);
+    final String nextDateStr = AppFormatters.formatDisplayDate(
+      status.nextPaymentDate,
+      dayFirst: true,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -112,7 +51,7 @@ class TrainerCard extends StatelessWidget {
                   radius: 24,
                   backgroundColor: _avatarBg,
                   child: Text(
-                    _initials,
+                    AppFormatters.getInitials(trainer.name),
                     style: TextStyle(
                       fontFamily: 'Poppins',
                       fontSize: 15,
@@ -223,7 +162,7 @@ class TrainerCard extends StatelessWidget {
                       Text(
                         isPaid
                             ? nextDateStr
-                            : '₹${_formatSalary(trainer.salary)}',
+                            : '₹${AppFormatters.formatAmount(trainer.salary, decimals: 2)}',
                         style: TextStyle(
                           fontFamily: 'Poppins',
                           fontSize: isPaid ? 17 : 22,
@@ -237,7 +176,7 @@ class TrainerCard extends StatelessWidget {
                       if (isPaid) ...[
                         const SizedBox(height: 2),
                         Text(
-                          '₹${_formatSalary(trainer.salary)} / month',
+                          '₹${AppFormatters.formatAmount(trainer.salary, decimals: 2)} / month',
                           style: const TextStyle(
                             fontFamily: 'Poppins',
                             fontSize: 12,
@@ -256,7 +195,6 @@ class TrainerCard extends StatelessWidget {
       ),
     );
   }
-
 
   Widget _buildStatusBadge(bool paid) {
     return Container(
@@ -278,16 +216,6 @@ class TrainerCard extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String get _initials {
-    final parts = trainer.name.trim().split(' ');
-    if (parts.length >= 2) {
-      return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
-    } else if (parts.isNotEmpty && parts[0].isNotEmpty) {
-      return parts[0][0].toUpperCase();
-    }
-    return '?';
   }
 
   // Cycle through a few nice avatar colours deterministically
@@ -314,15 +242,5 @@ class TrainerCard extends StatelessWidget {
   Color get _avatarFg {
     final idx = (trainer.id ?? 0) % _fgPalette.length;
     return _fgPalette[idx];
-  }
-
-  String _formatSalary(double salary) {
-    if (salary >= 1000) {
-      return salary.toStringAsFixed(2).replaceAllMapped(
-        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-        (m) => '${m[1]},',
-      );
-    }
-    return salary.toStringAsFixed(2);
   }
 }
