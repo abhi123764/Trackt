@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:trackt/screens/expenses/widgets/add_expense_sheet.dart';
 import 'package:trackt/screens/members/add_member_screen.dart';
 import 'package:trackt/screens/trainers/trainers_screen.dart';
 import '../attendance/attendance_screen.dart';
@@ -287,7 +288,64 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Navigator.of(context)
                     .push(
                       MaterialPageRoute(
-                        builder: (_) => const ExpensesScreen(),
+                        builder: (_) => Scaffold(
+                          backgroundColor: const Color(0xFFF8FAFC),
+                          appBar: AppBar(
+                            backgroundColor: Colors.white,
+                            elevation: 0,
+                            surfaceTintColor: Colors.transparent,
+                            leading: IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new,
+                                size: 18,
+                                color: Color(0xFF344054),
+                              ),
+                              onPressed: () => Navigator.of(context).pop(),
+                            ),
+                            title: const Text(
+                              'Expenses',
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 20,
+                                fontWeight: FontWeight.w800,
+                                color: Color(0xFF054446),
+                              ),
+                            ),
+                            bottom: PreferredSize(
+                              preferredSize: const Size.fromHeight(1),
+                              child: Container(
+                                height: 1,
+                                color: const Color(0xFFEAECF0),
+                              ),
+                            ),
+                          ),
+                          body: const SingleChildScrollView(
+                            padding: EdgeInsets.fromLTRB(20, 16, 20, 32),
+                            child: ExpensesScreen(isEmbedded: true),
+                          ),
+                          floatingActionButton: FloatingActionButton(
+                            onPressed: () {
+                              // Open add expense sheet via a global key or context lookup
+                              // We can use a navigator to push a temporary route that calls the modal.
+                              // Since we are inside the dashboard wrapper, we need to get a BuildContext.
+                              // Use the nearest context (this builder) to open the AddExpenseSheet.
+                              showModalBottomSheet(
+                                context: context,
+                                isScrollControlled: true,
+                                backgroundColor: Colors.transparent,
+                                builder: (_) => const AddExpenseSheet(),
+                              );
+                            },
+                            backgroundColor: const Color(0xFF054446),
+                            elevation: 4,
+                            shape: const CircleBorder(),
+                            child: const Icon(
+                              Icons.add,
+                              color: Colors.white,
+                              size: 28,
+                            ),
+                          ),
+                        ),
                       ),
                     )
                     .then((_) {
@@ -306,9 +364,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 Navigator.of(context)
                     .push(
-                      MaterialPageRoute(
-                        builder: (_) => const TrainersScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const TrainersScreen()),
                     )
                     .then((_) {
                       if (!context.mounted) return;

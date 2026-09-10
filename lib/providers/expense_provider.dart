@@ -26,7 +26,71 @@ class ExpenseProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
 
+  // ── Filter state ──────────────────────────────────────────────────────────
+  String? _filterCategory; // null = all categories
+  DateTime? _filterFrom;
+  DateTime? _filterTo;
+
+  String? get filterCategory => _filterCategory;
+  DateTime? get filterFrom => _filterFrom;
+  DateTime? get filterTo => _filterTo;
+
+  void setFilter({
+    String? category,
+    DateTime? from,
+    DateTime? to,
+    bool clearAll = false,
+  }) {
+    if (clearAll) {
+      _filterCategory = null;
+      _filterFrom = null;
+      _filterTo = null;
+    } else {
+      _filterCategory = category;
+      _filterFrom = from;
+      _filterTo = to;
+    }
+    notifyListeners();
+  }
+
   List<Expense> get expenses => _expenses;
+
+  /// Returns expenses after applying current filters.
+  List<Expense> get filteredExpenses {
+    var list = _expenses;
+
+    if (_filterCategory != null && _filterCategory!.isNotEmpty) {
+      list = list.where((e) => e.category == _filterCategory).toList();
+    }
+
+    if (_filterFrom != null) {
+      list = list.where((e) {
+        try {
+          final d = DateTime.parse(e.date);
+          return !d.isBefore(_filterFrom!);
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+    }
+
+    if (_filterTo != null) {
+      list = list.where((e) {
+        try {
+          final d = DateTime.parse(e.date);
+          return !d.isAfter(_filterTo!);
+        } catch (_) {
+          return true;
+        }
+      }).toList();
+    }
+
+    return list;
+  }
+
+  bool get hasActiveFilter =>
+      _filterCategory != null || _filterFrom != null || _filterTo != null;
+
   double get totalExpenses => _totalExpenses;
   double get monthlyExpenses => _monthlyExpenses;
 
@@ -49,7 +113,6 @@ class ExpenseProvider extends ChangeNotifier {
       }
       _totalExpenses = sum;
 
-      // Current month expences
       // Current month expenses
       final now = DateTime.now();
       final currentYearMonth =
@@ -126,6 +189,32 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> updateExpense({
+    required int id,
+    required String title,
+    required String category,
+    required double amount,
+    required String date,
+    String? notes,
+  }) async {
+    try {
+      final expense = Expense(
+        id: id,
+        category: category,
+        addCategory: title,
+        amount: amount,
+        date: date,
+        notes: notes,
+      );
+      await _service.updateExpense(expense);
+      await fetchExpenses();
+      return true;
+    } catch (e, stackTrace) {
+      debugPrint('Error updating expense: $e\n$stackTrace');
+      return false;
+    }
+  }
+
   Future<bool> deleteExpense(int id) async {
     try {
       await _service.deleteExpense(id);
@@ -137,3 +226,4 @@ class ExpenseProvider extends ChangeNotifier {
     }
   }
 }
+

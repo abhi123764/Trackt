@@ -1,11 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../models/expense.dart';
 import '../../../providers/dashboard_provider.dart';
 import '../../../providers/expense_provider.dart';
 import '../../../utils/formatters.dart';
 
 class AddExpenseSheet extends StatefulWidget {
-  const AddExpenseSheet({super.key});
+  /// When non-null, the sheet opens in edit mode pre-filled with this expense.
+  final Expense? expense;
+
+  const AddExpenseSheet({super.key, this.expense});
 
   @override
   State<AddExpenseSheet> createState() => _AddExpenseSheetState();
@@ -21,6 +25,8 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
   DateTime _selectedDate = DateTime.now();
   bool _isSaving = false;
 
+  bool get _isEditMode => widget.expense != null;
+
   final List<String> _categories = [
     'Salaries',
     'Rent/Lease',
@@ -29,6 +35,24 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
     'Equipment & Inventory',
     'Other',
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final e = widget.expense;
+    if (e != null) {
+      _titleController.text = e.addCategory ?? '';
+      _amountController.text = e.amount.toString();
+      _notesController.text = e.notes ?? '';
+      _selectedCategory =
+          _categories.contains(e.category) ? e.category : 'Other';
+      try {
+        _selectedDate = DateTime.parse(e.date);
+      } catch (_) {
+        _selectedDate = DateTime.now();
+      }
+    }
+  }
 
   @override
   void dispose() {
@@ -76,15 +100,31 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
     setState(() => _isSaving = true);
 
     final dateStr = _selectedDate.toIso8601String().split('T').first;
-    final success = await context.read<ExpenseProvider>().addExpense(
-      title: _titleController.text.trim(),
-      category: _selectedCategory,
-      amount: amount,
-      date: dateStr,
-      notes: _notesController.text.trim().isNotEmpty
-          ? _notesController.text.trim()
-          : null,
-    );
+    final provider = context.read<ExpenseProvider>();
+    bool success;
+
+    if (_isEditMode) {
+      success = await provider.updateExpense(
+        id: widget.expense!.id!,
+        title: _titleController.text.trim(),
+        category: _selectedCategory,
+        amount: amount,
+        date: dateStr,
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
+      );
+    } else {
+      success = await provider.addExpense(
+        title: _titleController.text.trim(),
+        category: _selectedCategory,
+        amount: amount,
+        date: dateStr,
+        notes: _notesController.text.trim().isNotEmpty
+            ? _notesController.text.trim()
+            : null,
+      );
+    }
 
     if (mounted) {
       setState(() => _isSaving = false);
@@ -93,13 +133,21 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Expense added: ${_titleController.text.trim()}'),
+            content: Text(
+              _isEditMode
+                  ? 'Expense updated successfully'
+                  : 'Expense added: ${_titleController.text.trim()}',
+            ),
             backgroundColor: const Color(0xFF054446),
           ),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Failed to save expense')),
+          SnackBar(
+            content: Text(
+              _isEditMode ? 'Failed to update expense' : 'Failed to save expense',
+            ),
+          ),
         );
       }
     }
@@ -135,9 +183,9 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                const Text(
-                  'Add New Expense',
-                  style: TextStyle(
+                Text(
+                  _isEditMode ? 'Edit Expense' : 'Add New Expense',
+                  style: const TextStyle(
                     fontFamily: 'Poppins',
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
@@ -146,7 +194,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                 ),
                 const SizedBox(height: 16),
 
-                // Expense Title (e.g. Trainer Salaries, Electricity Bill)
+                // Expense Title
                 const Text(
                   'EXPENSE TITLE',
                   style: TextStyle(
@@ -377,7 +425,7 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                 ),
                 const SizedBox(height: 24),
 
-                // Save Button
+                // Save / Update Button
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -398,9 +446,9 @@ class _AddExpenseSheetState extends State<AddExpenseSheet> {
                               strokeWidth: 2,
                             ),
                           )
-                        : const Text(
-                            'Save Expense',
-                            style: TextStyle(
+                        : Text(
+                            _isEditMode ? 'Update Expense' : 'Save Expense',
+                            style: const TextStyle(
                               fontFamily: 'Poppins',
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
