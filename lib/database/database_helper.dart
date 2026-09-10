@@ -547,7 +547,102 @@ class DatabaseHelper {
 
   Future<int> markAttendance(Attendance attendance) async {
     final db = await database;
+    if (attendance.memberId != null) {
+      final existing = await db.query(
+        'attendance',
+        where: 'member_id = ? AND date = ?',
+        whereArgs: [attendance.memberId, attendance.date],
+      );
+      if (existing.isNotEmpty) {
+        final existingRecord = existing.first;
+        final existingId = existingRecord['id'] as int;
+
+        // If attendance is already marked for the day (both IN and OUT set), no update needed!
+        if (existingRecord['check_in'] != null &&
+            existingRecord['check_out'] != null) {
+          return existingId;
+        }
+
+        final map = attendance.toMap();
+        map['id'] = existingId;
+        // Keep existing check_in if already recorded
+        if (existingRecord['check_in'] != null) {
+          map['check_in'] = existingRecord['check_in'];
+        }
+        if (map['check_out'] == null && existingRecord['check_out'] != null) {
+          map['check_out'] = existingRecord['check_out'];
+        }
+
+        await db.update(
+          'attendance',
+          map,
+          where: 'id = ?',
+          whereArgs: [existingId],
+        );
+        return existingId;
+      }
+    } else if (attendance.trainerId != null) {
+      final existing = await db.query(
+        'attendance',
+        where: 'trainer_id = ? AND date = ?',
+        whereArgs: [attendance.trainerId, attendance.date],
+      );
+      if (existing.isNotEmpty) {
+        final existingRecord = existing.first;
+        final existingId = existingRecord['id'] as int;
+
+        // If attendance is already marked for the day (both IN and OUT set), no update needed!
+        if (existingRecord['check_in'] != null &&
+            existingRecord['check_out'] != null) {
+          return existingId;
+        }
+
+        final map = attendance.toMap();
+        map['id'] = existingId;
+        if (existingRecord['check_in'] != null) {
+          map['check_in'] = existingRecord['check_in'];
+        }
+        if (map['check_out'] == null && existingRecord['check_out'] != null) {
+          map['check_out'] = existingRecord['check_out'];
+        }
+
+        await db.update(
+          'attendance',
+          map,
+          where: 'id = ?',
+          whereArgs: [existingId],
+        );
+        return existingId;
+      }
+    }
     return await db.insert('attendance', attendance.toMap()..remove('id'));
+  }
+
+  Future<int> getAttendanceCountForMember(int memberId) async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM attendance WHERE member_id = ? AND check_in IS NOT NULL',
+      [memberId],
+    );
+    if (result.isNotEmpty && result.first['count'] != null) {
+      return (result.first['count'] as num).toInt();
+    }
+    return 0;
+  }
+
+  Future<Attendance?> getLatestAttendanceForMember(int memberId) async {
+    final db = await database;
+    final result = await db.query(
+      'attendance',
+      where: 'member_id = ?',
+      whereArgs: [memberId],
+      orderBy: 'date DESC, id DESC',
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return Attendance.fromMap(result.first);
+    }
+    return null;
   }
 
   Future<List<Attendance>> getAttendanceForMember(int memberId) async {
@@ -651,6 +746,73 @@ class DatabaseHelper {
     return await db.delete('payments', where: 'id = ?', whereArgs: [id]);
   }
 
+  Future<double> getTodayCollectedRevenue(String today) async {
+    final db = await database;
+    final res = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'Paid' AND payment_date LIKE ?",
+      ['$today%'],
+    );
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getYesterdayCollectedRevenue(String yesterday) async {
+    final db = await database;
+    final res = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'Paid' AND payment_date LIKE ?",
+      ['$yesterday%'],
+    );
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<double> getMonthlyRevenue(String yearMonth) async {
+    final db = await database;
+    final res = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) as total FROM payments WHERE status = 'Paid' AND payment_date LIKE ?",
+      ['$yearMonth%'],
+    );
+    return (res.first['total'] as num?)?.toDouble() ?? 0.0;
+  }
+
+  Future<({double totalAmount, int count})> getPendingPaymentsSummary() async {
+    final db = await database;
+    final res = await db.rawQuery(
+      "SELECT COALESCE(SUM(amount), 0) as total, COUNT(*) as count FROM payments WHERE status = 'Pending'",
+    );
+    final total = (res.first['total'] as num?)?.toDouble() ?? 0.0;
+    final count = (res.first['count'] as num?)?.toInt() ?? 0;
+    return (totalAmount: total, count: count);
+  }
+
+  Future<List<Map<String, dynamic>>> getPaymentsWithDetails({
+    String? status,
+    int? limit,
+  }) async {
+    final db = await database;
+    String query = '''
+      SELECT 
+        p.*,
+        m.name as member_name,
+        m.profile_photo_path as member_photo,
+        m.mobile_number as member_mobile,
+        mp.name as plan_name,
+        mp.duration_days as plan_duration
+      FROM payments p
+      LEFT JOIN members m ON p.member_id = m.id
+      LEFT JOIN membership_plans mp ON p.plan_id = mp.id
+    ''';
+    List<Object?> args = [];
+    if (status != null && status.isNotEmpty) {
+      query += ' WHERE p.status = ?';
+      args.add(status);
+    }
+    query += ' ORDER BY p.payment_date DESC, p.id DESC';
+    if (limit != null) {
+      query += ' LIMIT ?';
+      args.add(limit);
+    }
+    return await db.rawQuery(query, args);
+  }
+
   //EXPENSES (expenses report, expense management)
 
   Future<int> insertExpense(Expense expense) async {
@@ -660,8 +822,24 @@ class DatabaseHelper {
 
   Future<List<Expense>> getAllExpenses() async {
     final db = await database;
-    final result = await db.query('expenses', orderBy: 'date DESC');
+
+    final result = await db.query('expenses', orderBy: 'date DESC, id DESC');
+
     return result.map((e) => Expense.fromMap(e)).toList();
+  }
+
+  Future<Map<String, double>> getExpensesCategoryBreakdown() async {
+    final db = await database;
+    final result = await db.rawQuery(
+      'SELECT category, SUM(amount) as total FROM expenses GROUP BY category',
+    );
+    final map = <String, double>{};
+    for (var row in result) {
+      final cat = row['category'] as String? ?? 'Other';
+      final total = (row['total'] as num?)?.toDouble() ?? 0.0;
+      map[cat] = total;
+    }
+    return map;
   }
 
   Future<double> getTotalExpenses({String? fromDate, String? toDate}) async {

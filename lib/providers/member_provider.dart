@@ -140,6 +140,16 @@ class MemberProvider extends ChangeNotifier {
       final todayStr = DateTime.now().toIso8601String().split('T').first;
       final existing = _todayAttendance[memberId];
 
+      // If already marked for today (both IN and OUT set), no update allowed!
+      if (existing != null && existing.checkIn != null && existing.checkOut != null) {
+        return false;
+      }
+
+      // If already checked in, no re-check-in allowed!
+      if (existing != null && existing.checkIn != null) {
+        return false;
+      }
+
       if (existing != null && existing.id != null) {
         final updated = Attendance(
           id: existing.id,
@@ -147,7 +157,7 @@ class MemberProvider extends ChangeNotifier {
           trainerId: existing.trainerId,
           date: todayStr,
           checkIn: checkInTime,
-          checkOut: null,
+          checkOut: existing.checkOut,
           status: 'Present',
         );
         await _memberService.updateAttendance(updated);
@@ -179,7 +189,16 @@ class MemberProvider extends ChangeNotifier {
   Future<bool> checkOutMember(int memberId, String checkOutTime) async {
     try {
       final existing = _todayAttendance[memberId];
-      if (existing != null && existing.id != null) {
+      // Must be checked in first
+      if (existing == null || existing.checkIn == null) {
+        return false;
+      }
+      // If already checked out, attendance is completed for the day - no update allowed!
+      if (existing.checkOut != null) {
+        return false;
+      }
+
+      if (existing.id != null) {
         final updated = Attendance(
           id: existing.id,
           memberId: memberId,

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../../models/trainer.dart';
@@ -8,12 +10,14 @@ class TrainerCard extends StatelessWidget {
   final Trainer trainer;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onTap;
 
   const TrainerCard({
     super.key,
     required this.trainer,
     required this.onEdit,
     required this.onDelete,
+    this.onTap,
   });
 
   @override
@@ -24,6 +28,8 @@ class TrainerCard extends StatelessWidget {
       status.nextPaymentDate,
       dayFirst: true,
     );
+    final bool hasPhoto = trainer.profilePhotoPath != null &&
+        File(trainer.profilePhotoPath!).existsSync();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
@@ -39,28 +45,37 @@ class TrainerCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── TOP ROW: Avatar + Name/Specialty + Edit icon ──────────────
-            Row(
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: _avatarBg,
-                  child: Text(
-                    AppFormatters.getInitials(trainer.name),
-                    style: TextStyle(
-                      fontFamily: 'Poppins',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: _avatarFg,
+                // ── TOP ROW: Avatar + Name/Specialty + Edit icon ──────────────
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: _avatarBg,
+                      backgroundImage:
+                          hasPhoto ? FileImage(File(trainer.profilePhotoPath!)) : null,
+                      child: hasPhoto
+                          ? null
+                          : Text(
+                              AppFormatters.getInitials(trainer.name),
+                              style: TextStyle(
+                                fontFamily: 'Poppins',
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: _avatarFg,
+                              ),
+                            ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
+                    const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,7 +208,9 @@ class TrainerCard extends StatelessWidget {
           ],
         ),
       ),
-    );
+    ),
+  ),
+);
   }
 
   Widget _buildStatusBadge(bool paid) {

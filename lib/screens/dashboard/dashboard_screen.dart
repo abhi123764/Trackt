@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:trackt/screens/members/add_member_screen.dart';
 import 'package:trackt/screens/trainers/trainers_screen.dart';
+import '../attendance/attendance_screen.dart';
+import '../expenses/expenses_screen.dart';
 
 import '../../models/dashboard_summary.dart';
 import '../../providers/dashboard_provider.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/formatters.dart';
 import '../members/members_screen.dart';
+import '../payments/payments_screen.dart';
 import 'widgets/activity_tile.dart';
 import 'widgets/dashboard_bottom_nav.dart';
 import 'widgets/dashboard_top_bar.dart';
@@ -41,6 +44,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           builder: (context, dashboard, child) {
             if (dashboard.currentTab == 1) {
               return const MembersScreen();
+            }
+
+            if (dashboard.currentTab == 3) {
+              return const PaymentsScreen();
             }
 
             if (dashboard.currentTab != 0) {
@@ -125,7 +132,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         const SizedBox(height: 20),
 
-        const Text('MORNING', style: AppTextStyles.label),
+        const Text('Welcome', style: AppTextStyles.label),
 
         const SizedBox(height: 4),
 
@@ -238,6 +245,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: 'Present Today',
               trailingColor: AppColors.accentGreen,
               valueColor: AppColors.tealPrimary,
+              onTap: () {
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => const AttendanceScreen(),
+                      ),
+                    )
+                    .then((_) {
+                      if (!context.mounted) return;
+                      context.read<DashboardProvider>().loadDashboard();
+                    });
+              },
             ),
 
             StatCard(
@@ -246,6 +265,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: '${summary.pendingFeeMembers} Members Due',
               trailingColor: AppColors.danger,
               valueColor: AppColors.danger,
+              onTap: () => context.read<DashboardProvider>().setTab(3),
             ),
 
             StatCard(
@@ -254,6 +274,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: 'All Payments',
               trailingColor: AppColors.accentGreen,
               valueColor: AppColors.textPrimary,
+              onTap: () => context.read<DashboardProvider>().setTab(3),
             ),
 
             StatCard(
@@ -262,6 +283,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: 'All Expenses',
               trailingColor: AppColors.danger,
               valueColor: AppColors.textPrimary,
+              onTap: () {
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => const ExpensesScreen(),
+                      ),
+                    )
+                    .then((_) {
+                      if (!context.mounted) return;
+                      context.read<DashboardProvider>().loadDashboard();
+                    });
+              },
             ),
 
             StatCard(
@@ -270,6 +303,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               trailing: 'Total Trainers',
               trailingColor: AppColors.textSecondary,
               valueColor: AppColors.tealPrimary,
+              onTap: () {
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => const TrainersScreen(),
+                      ),
+                    )
+                    .then((_) {
+                      if (!context.mounted) return;
+                      context.read<DashboardProvider>().loadDashboard();
+                    });
+              },
             ),
           ],
         );
@@ -310,7 +355,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
               icon: Icons.fact_check_outlined,
               label: 'Attendance',
               onTap: () {
-                // Attendance screen later.
+                Navigator.of(context)
+                    .push(
+                      MaterialPageRoute(
+                        builder: (_) => const AttendanceScreen(),
+                      ),
+                    )
+                    .then((_) {
+                      if (!context.mounted) return;
+                      context.read<DashboardProvider>().loadDashboard();
+                    });
               },
             ),
 

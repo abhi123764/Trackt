@@ -3,12 +3,18 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:trackt/main.dart';
 import 'package:trackt/models/member.dart';
+import 'package:trackt/models/trainer.dart';
+import 'package:trackt/providers/attendance_provider.dart';
 import 'package:trackt/providers/auth_provider.dart';
 import 'package:trackt/providers/dashboard_provider.dart';
+import 'package:trackt/providers/expense_provider.dart';
 import 'package:trackt/providers/member_provider.dart';
 import 'package:trackt/providers/trainer_provider.dart';
+import 'package:trackt/screens/attendance/attendance_screen.dart';
+import 'package:trackt/screens/expenses/expenses_screen.dart';
 import 'package:trackt/screens/members/member_details_screen.dart';
 import 'package:trackt/screens/members/members_screen.dart';
+import 'package:trackt/screens/trainers/trainer_details_screen.dart';
 import 'package:trackt/screens/trainers/trainers_screen.dart';
 
 void main() {
@@ -72,6 +78,50 @@ void main() {
     expect(find.text('Wayne Manor, Gotham'), findsOneWidget);
     expect(find.text('188 cm'), findsOneWidget);
     expect(find.text('95.0 kg'), findsOneWidget);
+  });
+
+  testWidgets('TrainerDetailsScreen renders trainer profile details', (WidgetTester tester) async {
+    final testTrainer = Trainer(
+      id: 55,
+      name: 'Clark Kent',
+      age: 32,
+      mobileNumber: '9123456780',
+      email: 'clark@dailyplanet.com',
+      gender: 'Male',
+      bloodGroup: 'A+',
+      dob: '18/06/1993',
+      address: 'Smallville, Kansas',
+      qualification: 'Strength & Conditioning Specialist',
+      experience: '6 Years',
+      shiftStart: '06:00 AM',
+      shiftEnd: '02:00 PM',
+      joiningDate: '2025-01-15',
+      salary: 50000,
+    );
+
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => TrainerProvider()),
+          ChangeNotifierProvider(create: (_) => MemberProvider()),
+        ],
+        child: MaterialApp(
+          home: TrainerDetailsScreen(trainer: testTrainer),
+        ),
+      ),
+    );
+
+    expect(find.text('Trainer Profile'), findsOneWidget);
+    expect(find.text('Clark Kent'), findsOneWidget);
+    expect(find.text('STRENGTH & CONDITIONING SPECIALIST'), findsOneWidget);
+    expect(find.text('Employment & Compensation'), findsOneWidget);
+    expect(find.text('Personal Information'), findsOneWidget);
+    expect(find.text('Uploaded Documents'), findsOneWidget);
+    expect(find.text('9123456780'), findsOneWidget);
+    expect(find.text('clark@dailyplanet.com'), findsOneWidget);
+    expect(find.text('Smallville, Kansas'), findsOneWidget);
+    expect(find.text('32 Years'), findsOneWidget);
+    expect(find.text('6 Years'), findsOneWidget);
   });
 
   testWidgets('MembersScreen back button switches dashboard tab to 0', (WidgetTester tester) async {
@@ -139,6 +189,53 @@ void main() {
     // Verify we are back to previous screen
     expect(find.text('Open Trainers'), findsOneWidget);
     expect(find.text('Trainers'), findsNothing);
+  });
+
+  testWidgets('AttendanceScreen renders header, search, and plan chips', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => DashboardProvider()),
+          ChangeNotifierProvider(create: (_) => MemberProvider()),
+          ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ],
+        child: const MaterialApp(
+          home: AttendanceScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.text('Attendance Details'), findsOneWidget);
+    expect(find.text('Search members...'), findsOneWidget);
+    expect(find.text('All'), findsOneWidget);
+    expect(find.byIcon(Icons.arrow_back_ios_new), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsOneWidget);
+  });
+
+  testWidgets('ExpensesScreen renders header, revenue target, and breakdown', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => AuthProvider()),
+          ChangeNotifierProvider(create: (_) => DashboardProvider()),
+          ChangeNotifierProvider(create: (_) => ExpenseProvider()),
+        ],
+        child: const MaterialApp(
+          home: ExpensesScreen(),
+        ),
+      ),
+    );
+
+    await tester.pump();
+
+    expect(find.text('Expenses'), findsOneWidget);
+    expect(find.text('Revenue this Month'), findsOneWidget);
+    expect(find.text('Categorical Breakdown'), findsOneWidget);
+    expect(find.text('Recent Expenses'), findsOneWidget);
+    expect(find.byIcon(Icons.add), findsOneWidget);
   });
 }
 

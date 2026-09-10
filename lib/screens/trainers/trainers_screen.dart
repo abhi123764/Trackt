@@ -9,6 +9,7 @@ import '../../utils/formatters.dart';
 import '../dashboard/dashboard_screen.dart';
 import 'add_trainer_screen.dart';
 import 'edit_trainer_screen.dart';
+import 'trainer_details_screen.dart';
 import 'widgets/trainer_card.dart';
 
 class TrainersScreen extends StatefulWidget {
@@ -59,6 +60,19 @@ class _TrainersScreenState extends State<TrainersScreen> {
         .push(
           MaterialPageRoute(
             builder: (_) => EditTrainerScreen(trainer: trainer),
+          ),
+        )
+        .then((_) {
+          if (!mounted) return;
+          context.read<TrainerProvider>().fetchTrainers();
+        });
+  }
+
+  void _openTrainerDetails(Trainer trainer) {
+    Navigator.of(context)
+        .push(
+          MaterialPageRoute(
+            builder: (_) => TrainerDetailsScreen(trainer: trainer),
           ),
         )
         .then((_) {
@@ -249,7 +263,12 @@ class _TrainersScreenState extends State<TrainersScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
+
+                // ── STATUS FILTER CHIPS ROW ────────────────────────────
+                _buildStatusFilterChips(provider),
+
+                const SizedBox(height: 8),
 
                 // ── TRAINER CARDS LIST ─────────────────────────────────
                 Expanded(
@@ -262,12 +281,13 @@ class _TrainersScreenState extends State<TrainersScreen> {
                       : provider.errorMessage != null
                       ? _buildErrorState(provider)
                       : trainers.isEmpty
-                      ? _buildEmptyState()
+                      ? _buildEmptyState(provider)
                       : ListView.builder(
                           padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                           itemCount: trainers.length,
                           itemBuilder: (_, i) => TrainerCard(
                             trainer: trainers[i],
+                            onTap: () => _openTrainerDetails(trainers[i]),
                             onEdit: () => _openEditTrainer(trainers[i]),
                             onDelete: () => _confirmDelete(trainers[i]),
                           ),
@@ -391,7 +411,66 @@ class _TrainersScreenState extends State<TrainersScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
+  // ── FILTER CHIPS ROW ─────────────────────────────────────────────────────
+  Widget _buildStatusFilterChips(TrainerProvider provider) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        children: [
+          _buildFilterChip(
+            label: 'All Trainers',
+            isSelected: provider.statusFilter == 'all',
+            onTap: () => provider.setStatusFilter('all'),
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: 'Salary Paid',
+            isSelected: provider.statusFilter == 'paid',
+            onTap: () => provider.setStatusFilter('paid'),
+          ),
+          const SizedBox(width: 8),
+          _buildFilterChip(
+            label: 'Salary Due',
+            isSelected: provider.statusFilter == 'due',
+            onTap: () => provider.setStatusFilter('due'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF054446) : const Color(0xFFEAECF0),
+          borderRadius: BorderRadius.circular(20),
+          border: isSelected ? null : Border.all(color: const Color(0xFFD0D5DD)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Poppins',
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+            color: isSelected ? Colors.white : const Color(0xFF475467),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(TrainerProvider provider) {
+    final bool isFiltered = provider.searchQuery.isNotEmpty || provider.statusFilter != 'all';
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -399,14 +478,14 @@ class _TrainersScreenState extends State<TrainersScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              Icons.sports_gymnastics,
+              isFiltered ? Icons.filter_alt_off_outlined : Icons.sports_gymnastics,
               size: 64,
               color: Colors.grey.shade300,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'No Trainers Yet',
-              style: TextStyle(
+            Text(
+              isFiltered ? 'No Matching Trainers' : 'No Trainers Yet',
+              style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -414,15 +493,29 @@ class _TrainersScreenState extends State<TrainersScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
-              'Tap "Add Trainer" below to register your first trainer.',
+            Text(
+              isFiltered
+                  ? 'Try adjusting your search query or status filter.'
+                  : 'Tap "Add Trainer" below to register your first trainer.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'Poppins',
                 fontSize: 13,
                 color: Color(0xFF667085),
               ),
             ),
+            if (isFiltered) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: () {
+                  _searchController.clear();
+                  provider.setSearchQuery('');
+                  provider.setStatusFilter('all');
+                },
+                icon: const Icon(Icons.restart_alt, size: 18),
+                label: const Text('Reset Filters'),
+              ),
+            ],
           ],
         ),
       ),

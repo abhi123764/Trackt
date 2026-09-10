@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'providers/attendance_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/dashboard_provider.dart';
+import 'providers/expense_provider.dart';
 import 'providers/member_provider.dart';
+import 'providers/payment_provider.dart';
 import 'providers/trainer_provider.dart';
 import 'screens/splash_screen/splash_screen.dart';
 import 'theme/app_theme.dart';
@@ -16,6 +19,9 @@ void main() {
         ChangeNotifierProvider(create: (_) => DashboardProvider()),
         ChangeNotifierProvider(create: (_) => MemberProvider()),
         ChangeNotifierProvider(create: (_) => TrainerProvider()),
+        ChangeNotifierProvider(create: (_) => PaymentProvider()),
+        ChangeNotifierProvider(create: (_) => AttendanceProvider()),
+        ChangeNotifierProvider(create: (_) => ExpenseProvider()),
       ],
       child: const TracktApp(),
     ),

@@ -9,24 +9,39 @@ class TrainerProvider extends ChangeNotifier {
   bool _isLoading = false;
   String? _errorMessage;
   String _searchQuery = '';
+  String _statusFilter = 'all'; // 'all', 'paid', 'due'
 
   List<Trainer> get trainers => _trainers;
   bool get isLoading => _isLoading;
   String? get errorMessage => _errorMessage;
   String get searchQuery => _searchQuery;
+  String get statusFilter => _statusFilter;
 
   void setSearchQuery(String query) {
     _searchQuery = query;
     notifyListeners();
   }
 
+  void setStatusFilter(String filter) {
+    _statusFilter = filter;
+    notifyListeners();
+  }
+
   List<Trainer> get filteredTrainers {
+    var list = _trainers;
+    if (_statusFilter == 'paid') {
+      list = list.where((t) => t.salaryStatus.isPaid).toList();
+    } else if (_statusFilter == 'due') {
+      list = list.where((t) => !t.salaryStatus.isPaid).toList();
+    }
+
     final q = _searchQuery.trim().toLowerCase();
-    if (q.isEmpty) return _trainers;
-    return _trainers.where((t) {
+    if (q.isEmpty) return list;
+    return list.where((t) {
       return t.name.toLowerCase().contains(q) ||
           (t.qualification?.toLowerCase().contains(q) ?? false) ||
-          (t.email?.toLowerCase().contains(q) ?? false);
+          (t.email?.toLowerCase().contains(q) ?? false) ||
+          (t.mobileNumber?.toLowerCase().contains(q) ?? false);
     }).toList();
   }
 
